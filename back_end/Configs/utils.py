@@ -2,16 +2,16 @@ from fastapi import Depends, HTTPException, status
 from datetime import datetime, timedelta, timezone
 from jose import JWTError, jwt
 from typing import Optional
-from Configs.schemas import TokenData, User
-from Configs.database import get_db
-from Configs.models import User as UserModel
+from configs.schemas import TokenData, User
+from configs.database import get_db
+from configs.models import User as UserModel
 from passlib.context import CryptContext
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 
 SECRET_KEY = '39e38ec98aedfcc33fbc2a1e371ecd6b817e7172ead89c5c1faf19b0ef0e8e2a'
 ALGORITHM = 'HS256'
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+ACCESS_TOKEN_EXPIRE_MINUTES = 1440  # 24 hours
 
 password_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
 oauth_2_scheme = OAuth2PasswordBearer(tokenUrl='token')

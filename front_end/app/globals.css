@@ -2,18 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  font-family: Arial, Helvetica, sans-serif;
-}
-
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
-}
-
 @layer base {
   :root {
+    --font-sans: var(--font-poppins);
+    --font-heading: var(--font-playfair);
+    --font-mono: var(--font-inter);
     --background: 0 0% 100%;
     --foreground: 0 0% 3.9%;
     --card: 0 0% 100%;
@@ -82,6 +75,14 @@ body {
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
+
+  body {
+    @apply antialiased;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-heading;
+  }
 }
 
 @layer base {
@@ -89,6 +90,38 @@ body {
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
+  }
+}
+
+@layer components {
+  .book-title {
+    @apply font-heading text-2xl font-bold text-purple-900;
+  }
+
+  .book-subtitle {
+    @apply font-sans text-lg text-purple-700;
+  }
+
+  .section-title {
+    @apply font-heading text-3xl font-bold text-purple-900 mb-6;
+  }
+
+  .card-title {
+    @apply font-sans text-sm font-semibold text-purple-900;
+  }
+
+  .btn-primary {
+    @apply bg-purple-800 hover:bg-purple-900 text-white font-sans font-medium;
+  }
+
+  .btn-secondary {
+    @apply text-purple-700 hover:bg-purple-50 font-sans font-medium;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
   }
 }

@@ -1,183 +1,220 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { useToast } from "@/components/ui/use-toast";
+import Link from 'next/link';
 
-export default function Register() {
+export default function RegisterPage() {
   const router = useRouter();
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const token = localStorage.getItem('access_token');
+    if (token) {
+      router.push('/bookshelf');
+    }
+  }, [router]);
+
   const [formData, setFormData] = useState({
     username: '',
     email: '',
+    full_name: '',
     password: '',
-    confirmPassword: '',
-    full_name: ''
+    confirm_password: ''
   });
-  const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
     setError('');
+    setLoading(true);
 
-    if (formData.password !== formData.confirmPassword) {
-      setError('As senhas não coincidem!');
-      setIsLoading(false);
+    // Validar campos obrigatórios
+    if (!formData.username || !formData.email || !formData.password || !formData.confirm_password || !formData.full_name) {
+      setError('Todos os campos são obrigatórios');
+      setLoading(false);
+      return;
+    }
+
+    // Validar email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      setError('Email inválido');
+      setLoading(false);
+      return;
+    }
+
+    // Validar senha
+    if (formData.password.length < 6) {
+      setError('A senha deve ter pelo menos 6 caracteres');
+      setLoading(false);
+      return;
+    }
+
+    // Validar confirmação de senha
+    if (formData.password !== formData.confirm_password) {
+      setError('As senhas não coincidem');
+      setLoading(false);
       return;
     }
 
     try {
-      console.log('Tentando registrar usuário:', formData);
-      
-      const response = await fetch('http://localhost:8000/register', {
+      const response = await fetch('http://localhost:8000/api/auth/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json'
         },
         body: JSON.stringify({
           username: formData.username,
           email: formData.email,
           password: formData.password,
-          full_name: formData.full_name,
-          disabled: false
-        }),
+          full_name: formData.full_name
+        })
       });
 
-      console.log('Resposta do servidor:', response.status);
+      const data = await response.json();
 
-      if (response.ok) {
-        const data = await response.json();
-        console.log('Usuário registrado com sucesso:', data);
-        router.push('/login');
-      } else {
-        const errorData = await response.json();
-        console.error('Erro no registro:', errorData);
-        setError(errorData.detail || 'Erro ao registrar usuário');
+      if (!response.ok) {
+        if (response.status === 400) {
+          if (data.detail.includes('username')) {
+            throw new Error('Este nome de usuário já está em uso');
+          } else if (data.detail.includes('email')) {
+            throw new Error('Este email já está em uso');
+          } else {
+            throw new Error(data.detail || 'Dados inválidos');
+          }
+        } else {
+          throw new Error(data.detail || 'Erro ao criar conta');
+        }
       }
+
+      localStorage.setItem('access_token', data.access_token);
+      router.push('/bookshelf');
     } catch (error) {
-      console.error('Erro ao registrar:', error);
-      setError('Erro ao conectar com o servidor. Verifique se o servidor está rodando.');
+      console.error('Erro no registro:', error);
+      setError(error instanceof Error ? error.message : 'Erro ao criar conta');
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#1d232a] p-4">
-      <div className="w-full max-w-md">
-        <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold text-white">Registrar</h1>
-          <p className="mt-2 text-gray-400">Crie sua conta para começar</p>
+    <div className="min-h-screen bg-purple-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8">
+        <div>
+          <h2 className="mt-6 text-center text-3xl font-heading text-purple-900">
+            Crie sua conta
+          </h2>
+          <p className="mt-2 text-center text-sm text-purple-600">
+            Ou{' '}
+            <Link href="/login" className="font-medium text-purple-600 hover:text-purple-500">
+              faça login se já tiver uma conta
+            </Link>
+          </p>
         </div>
-        <Card className="border-0 bg-[#1d232a] text-white shadow-lg">
-          <form onSubmit={handleSubmit}>
-            <CardContent className="pt-6">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="username" className="text-gray-300">
-                    Nome de Usuário
-                  </Label>
-                  <Input
-                    id="username"
-                    name="username"
-                    type="text"
-                    required
-                    value={formData.username}
-                    onChange={handleChange}
-                    placeholder="Usuário"
-                    className="border-gray-700 bg-[#2c3440] text-white placeholder:text-gray-500"
-                  />
+
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-center">
+            {error}
+          </div>
+        )}
+
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          <div className="rounded-md shadow-sm space-y-4">
+            <div>
+              <Label htmlFor="username">Nome de usuário</Label>
+              <Input
+                id="username"
+                name="username"
+                type="text"
+                required
+                value={formData.username}
+                onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                className="appearance-none rounded-lg relative block w-full px-3 py-2 border border-purple-300 placeholder-purple-400 text-purple-900 focus:outline-none focus:ring-purple-500 focus:border-purple-500 focus:z-10 sm:text-sm"
+                placeholder="Nome de usuário"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                required
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                className="appearance-none rounded-lg relative block w-full px-3 py-2 border border-purple-300 placeholder-purple-400 text-purple-900 focus:outline-none focus:ring-purple-500 focus:border-purple-500 focus:z-10 sm:text-sm"
+                placeholder="Email"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="full_name">Nome completo</Label>
+              <Input
+                id="full_name"
+                name="full_name"
+                type="text"
+                required
+                value={formData.full_name}
+                onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                className="appearance-none rounded-lg relative block w-full px-3 py-2 border border-purple-300 placeholder-purple-400 text-purple-900 focus:outline-none focus:ring-purple-500 focus:border-purple-500 focus:z-10 sm:text-sm"
+                placeholder="Nome completo"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="password">Senha</Label>
+              <Input
+                id="password"
+                name="password"
+                type="password"
+                required
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                className="appearance-none rounded-lg relative block w-full px-3 py-2 border border-purple-300 placeholder-purple-400 text-purple-900 focus:outline-none focus:ring-purple-500 focus:border-purple-500 focus:z-10 sm:text-sm"
+                placeholder="Senha"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="confirm_password">Confirmar senha</Label>
+              <Input
+                id="confirm_password"
+                name="confirm_password"
+                type="password"
+                required
+                value={formData.confirm_password}
+                onChange={(e) => setFormData({ ...formData, confirm_password: e.target.value })}
+                className="appearance-none rounded-lg relative block w-full px-3 py-2 border border-purple-300 placeholder-purple-400 text-purple-900 focus:outline-none focus:ring-purple-500 focus:border-purple-500 focus:z-10 sm:text-sm"
+                placeholder="Confirmar senha"
+              />
+            </div>
+          </div>
+
+          <div>
+            <Button
+              type="submit"
+              disabled={loading}
+              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
+            >
+              {loading ? (
+                <div className="flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Criando conta...
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="full_name" className="text-gray-300">
-                    Nome Completo
-                  </Label>
-                  <Input
-                    id="full_name"
-                    name="full_name"
-                    type="text"
-                    value={formData.full_name}
-                    onChange={handleChange}
-                    placeholder="Nome completo"
-                    className="border-gray-700 bg-[#2c3440] text-white placeholder:text-gray-500"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email" className="text-gray-300">
-                    Email
-                  </Label>
-                  <Input
-                    id="email"
-                    name="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    placeholder="Email"
-                    className="border-gray-700 bg-[#2c3440] text-white placeholder:text-gray-500"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password" className="text-gray-300">
-                    Senha
-                  </Label>
-                  <Input
-                    id="password"
-                    name="password"
-                    type="password"
-                    required
-                    value={formData.password}
-                    onChange={handleChange}
-                    placeholder="Senha"
-                    className="border-gray-700 bg-[#2c3440] text-white placeholder:text-gray-500"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="confirmPassword" className="text-gray-300">
-                    Confirmar Senha
-                  </Label>
-                  <Input
-                    id="confirmPassword"
-                    name="confirmPassword"
-                    type="password"
-                    required
-                    value={formData.confirmPassword}
-                    onChange={handleChange}
-                    placeholder="Confirmar senha"
-                    className="border-gray-700 bg-[#2c3440] text-white placeholder:text-gray-500"
-                  />
-                </div>
-                {error && <p className="text-sm text-[#ff6b6b]">{error}</p>}
-              </div>
-            </CardContent>
-            <CardFooter className="flex flex-col">
-              <Button 
-                type="submit" 
-                className="w-full bg-[#8F00FF] text-white hover:bg-[#8F00FF]" 
-                disabled={isLoading}
-              >
-                {isLoading ? "Registrando..." : "Registrar"}
-              </Button>
-              <div className="mt-4 text-center text-sm text-gray-400">
-                Já tem uma conta?{" "}
-                <a href="/login" className="text-[#8F00FF] hover:underline">
-                  Faça login
-                </a>
-              </div>
-            </CardFooter>
-          </form>
-        </Card>
+              ) : (
+                'Criar conta'
+              )}
+            </Button>
+          </div>
+        </form>
       </div>
     </div>
   );

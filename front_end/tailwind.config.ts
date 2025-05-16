@@ -19,6 +19,11 @@ const config = {
       },
     },
     extend: {
+      fontFamily: {
+        sans: ['var(--font-poppins)'],
+        heading: ['var(--font-playfair)'],
+        mono: ['var(--font-inter)'],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",

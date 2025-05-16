@@ -1,17 +1,24 @@
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
+from configs.settings import settings
 
-DATABASE_URL = "postgresql://postgres:password@localhost:5432/canto-do-livro"
-
+# Create SQLAlchemy engine
 engine = create_engine(
-    DATABASE_URL, connect_args={"check_same_thread": False}
+    settings.DATABASE_URL,
+    pool_size=5,
+    max_overflow=10,
+    pool_timeout=30,
+    pool_recycle=1800
 )
+
+# Create SessionLocal class
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
+# Create Base class
 Base = declarative_base()
 
-# Dependency
+# Dependency to get DB session
 def get_db():
     db = SessionLocal()
     try:

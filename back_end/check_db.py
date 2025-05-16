@@ -1,7 +1,7 @@
 from sqlalchemy import create_engine, MetaData, Table, inspect
 from sqlalchemy.orm import sessionmaker
-from Configs.database import engine, Base
-from Configs.models import User
+from configs.database import engine, Base
+from configs.models import User
 
 # Criar uma sessão
 Session = sessionmaker(bind=engine)

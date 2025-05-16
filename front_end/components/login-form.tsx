@@ -31,7 +31,7 @@ export default function LoginForm() {
       formData.append('username', username)
       formData.append('password', password)
 
-      const response = await fetch('http://localhost:8000/token', {
+      const response = await fetch('http://localhost:8000/api/auth/token', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
@@ -57,8 +57,8 @@ export default function LoginForm() {
       // Armazena o token no localStorage
       localStorage.setItem('access_token', tokenData.access_token)
       
-      // Redireciona para a página protegida
-      router.push("/dashboard")
+      // Redireciona para a estante
+      router.push("/bookshelf")
 
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro desconhecido")

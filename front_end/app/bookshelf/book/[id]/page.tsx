@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
+import { api } from '@/config/api';
 
 interface Book {
   id: number;
@@ -78,22 +79,8 @@ export default function BookDetailsPage({ params }: { params: Promise<{ id: stri
 
   const fetchBookDetails = async () => {
     try {
-      const token = localStorage.getItem('access_token');
-      if (!token) {
-        throw new Error('Token não encontrado');
-      }
-
-      const response = await fetch(`http://localhost:8000/api/bookshelf/books/${resolvedParams.id}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Falha ao buscar detalhes do livro');
-      }
-
-      const data = await response.json();
+      console.log('Buscando detalhes do livro...');
+      const data = await api.getBookDetails(parseInt(resolvedParams.id));
       console.log('Dados recebidos:', data);
       setBook(data.book);
       setBookshelfEntry(data.bookshelf_entry);
@@ -101,7 +88,7 @@ export default function BookDetailsPage({ params }: { params: Promise<{ id: stri
       console.error('Erro ao buscar detalhes do livro:', error);
       toast({
         title: "Erro",
-        description: "Falha ao carregar detalhes do livro",
+        description: error instanceof Error ? error.message : "Falha ao carregar detalhes do livro",
         variant: "destructive",
       });
     } finally {
@@ -111,41 +98,24 @@ export default function BookDetailsPage({ params }: { params: Promise<{ id: stri
 
   const handleStatusChange = async (value: string) => {
     try {
-      const token = localStorage.getItem('access_token');
-      if (!token) {
-        console.error('Token não encontrado');
-        router.push('/login');
-        return;
-      }
-
       if (!bookshelfEntry) {
         console.error('Entrada da estante não encontrada');
         return;
       }
 
       console.log('Atualizando status para:', value);
-      const response = await fetch(`http://localhost:8000/api/bookshelf/${bookshelfEntry.id}`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token.trim()}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          status: value,
-          pages_read: value === 'reading' ? 0 : formData.pages_read,
-          total_pages: formData.total_pages
-        })
+      console.log('Dados sendo enviados:', {
+        status: value,
+        pages_read: value === 'reading' ? 0 : formData.pages_read,
+        total_pages: formData.total_pages
       });
 
-      console.log('Resposta da API:', response.status);
+      const updatedEntry = await api.updateBookshelfEntry(bookshelfEntry.id, {
+        status: value,
+        pages_read: value === 'reading' ? 0 : formData.pages_read,
+        total_pages: formData.total_pages
+      });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Erro na resposta:', errorData);
-        throw new Error(errorData.detail || 'Falha ao atualizar status');
-      }
-
-      const updatedEntry = await response.json();
       console.log('Entrada atualizada:', updatedEntry);
       setBookshelfEntry(updatedEntry);
       setFormData(prev => ({
@@ -210,38 +180,17 @@ export default function BookDetailsPage({ params }: { params: Promise<{ id: stri
 
   const handlePagesUpdate = async () => {
     try {
-      const token = localStorage.getItem('access_token');
-      if (!token) {
-        console.error('Token não encontrado');
-        router.push('/login');
-        return;
-      }
-
       if (!bookshelfEntry) {
         console.error('Entrada da estante não encontrada');
         return;
       }
 
       console.log('Atualizando páginas lidas:', formData.pages_read);
-      const response = await fetch(`http://localhost:8000/api/bookshelf/${bookshelfEntry.id}`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${token.trim()}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          pages_read: formData.pages_read,
-          total_pages: formData.total_pages
-        })
+      const updatedEntry = await api.updateBookshelfEntry(bookshelfEntry.id, {
+        pages_read: formData.pages_read,
+        total_pages: formData.total_pages
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Erro na resposta:', errorData);
-        throw new Error(errorData.detail || 'Falha ao atualizar páginas lidas');
-      }
-
-      const updatedEntry = await response.json();
       console.log('Entrada atualizada:', updatedEntry);
       setBookshelfEntry(updatedEntry);
       
@@ -264,13 +213,6 @@ export default function BookDetailsPage({ params }: { params: Promise<{ id: stri
   const handleRemoveBook = async () => {
     try {
       console.log('Iniciando remoção do livro...');
-      const token = localStorage.getItem('access_token');
-      if (!token) {
-        console.log('Token não encontrado, redirecionando para login...');
-        router.push('/login');
-        return;
-      }
-
       if (!bookshelfEntry) {
         console.log('BookshelfEntry não encontrado');
         toast({
@@ -282,28 +224,10 @@ export default function BookDetailsPage({ params }: { params: Promise<{ id: stri
       }
 
       console.log('Dados para remoção:', {
-        bookshelfId: bookshelfEntry.id,
-        token: token.substring(0, 10) + '...' // Log apenas o início do token por segurança
+        bookshelfId: bookshelfEntry.id
       });
 
-      const response = await fetch(`http://localhost:8000/api/bookshelf/${bookshelfEntry.id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token.trim()}`
-        },
-      });
-
-      console.log('Resposta da API:', {
-        status: response.status,
-        ok: response.ok,
-        statusText: response.statusText
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ detail: 'Erro desconhecido' }));
-        console.error('Erro na resposta:', errorData);
-        throw new Error(errorData.detail || 'Falha ao remover livro da estante');
-      }
+      await api.removeFromBookshelf(bookshelfEntry.id);
 
       toast({
         title: "Sucesso",

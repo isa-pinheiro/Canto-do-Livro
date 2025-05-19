@@ -32,17 +32,29 @@ export default function LoginPage() {
 
     try {
       console.log('Iniciando tentativa de login...');
-      const response = await fetch('http://localhost:8000/api/auth/token', {
+      console.log('Dados sendo enviados:', { username, password: '****' });
+
+      const response = await fetch('http://localhost:8000/api/auth/login', {
         method: 'POST',
-        body: formData,
         headers: {
-          'Accept': 'application/json'
-        }
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username,
+          password
+        })
       });
 
       console.log('Resposta do servidor:', response.status);
       
-      const data = await response.json();
+      let data;
+      try {
+        data = await response.json();
+        console.log('Dados recebidos:', data);
+      } catch (e) {
+        console.error('Erro ao parsear resposta:', e);
+        throw new Error('Erro ao processar resposta do servidor');
+      }
 
       if (!response.ok) {
         if (response.status === 401) {
@@ -56,10 +68,16 @@ export default function LoginPage() {
 
       console.log('Login bem-sucedido');
       localStorage.setItem('access_token', data.access_token);
+      localStorage.setItem('refresh_token', data.refresh_token);
       router.push('/bookshelf');
     } catch (error) {
       console.error('Erro no login:', error);
       setError(error instanceof Error ? error.message : 'Erro ao fazer login');
+      toast({
+        title: "Erro no login",
+        description: error instanceof Error ? error.message : 'Erro ao fazer login',
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }

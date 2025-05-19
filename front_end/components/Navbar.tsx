@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { BookOpen, User } from 'lucide-react';
+import { BookOpen, User, Search } from 'lucide-react';
 
 export function Navbar() {
   const pathname = usePathname();
@@ -26,6 +26,17 @@ export function Navbar() {
             >
               <BookOpen className="h-5 w-5" />
               Minha Estante
+            </Link>
+            <Link
+              href="/search"
+              className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
+                pathname === '/search'
+                  ? 'text-purple-900 bg-purple-50'
+                  : 'text-purple-700 hover:text-purple-900 hover:bg-purple-50'
+              }`}
+            >
+              <Search className="h-5 w-5" />
+              Pesquisar Usuários
             </Link>
           </div>
 

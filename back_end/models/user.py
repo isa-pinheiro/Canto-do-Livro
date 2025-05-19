@@ -1,7 +1,16 @@
-from sqlalchemy import Column, Integer, String, DateTime, Boolean
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey, Table
 from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
 from datetime import datetime
-from .base import Base
+from back_end.models.base import Base
+
+# Tabela de associação para seguir usuários
+user_follows = Table(
+    'user_follows',
+    Base.metadata,
+    Column('follower_id', Integer, ForeignKey('users.id'), primary_key=True),
+    Column('following_id', Integer, ForeignKey('users.id'), primary_key=True)
+)
 
 class User(Base):
     __tablename__ = 'users'
@@ -13,8 +22,17 @@ class User(Base):
     password_hash = Column(String)
     profile_picture = Column(String, nullable=True)  # URL da imagem
     disabled = Column(Boolean, default=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     # Relationships
-    bookshelves = relationship("UserBookshelf", back_populates="user", cascade="all, delete-orphan") 
+    bookshelves = relationship("UserBookshelf", back_populates="user", cascade="all, delete-orphan")
+
+    # Relacionamentos para seguir/deixar de seguir
+    following = relationship(
+        'User',
+        secondary=user_follows,
+        primaryjoin=(id == user_follows.c.follower_id),
+        secondaryjoin=(id == user_follows.c.following_id),
+        backref='followers'
+    ) 

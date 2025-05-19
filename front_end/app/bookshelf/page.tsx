@@ -12,6 +12,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Plus } from 'lucide-react';
 import { BookOpen, Star, Calendar } from 'lucide-react';
+import { api } from '@/config/api';
 
 interface Book {
   id: number;
@@ -30,7 +31,7 @@ interface BookshelfEntry {
   book: Book;
   status: 'to_read' | 'reading' | 'read' | 'favorite';
   current_page: number;
-  total_pages: number;
+  total_pages?: number;
 }
 
 export default function BookshelfPage() {
@@ -51,38 +52,8 @@ export default function BookshelfPage() {
 
   const fetchBookshelf = async () => {
     try {
-      const token = localStorage.getItem('access_token');
-      if (!token) {
-        router.push('/login');
-        return;
-      }
-
       console.log('Iniciando busca da estante...');
-      const response = await fetch('http://localhost:8000/api/bookshelf/', {
-        headers: {
-          'Authorization': `Bearer ${token.trim()}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        mode: 'cors',
-        credentials: 'include'
-      });
-
-      console.log('Resposta da API:', response.status);
-      
-      if (!response.ok) {
-        if (response.status === 401) {
-          console.error('Token inválido ou expirado');
-          localStorage.removeItem('access_token');
-          router.push('/login');
-          return;
-        }
-        const errorData = await response.json().catch(() => ({ detail: 'Erro desconhecido' }));
-        console.error('Erro na resposta:', errorData);
-        throw new Error(errorData.detail || 'Falha ao carregar estante');
-      }
-
-      const data = await response.json();
+      const data = await api.getBookshelf();
       console.log('Dados da estante recebidos:', data);
       setBooks(data);
     } catch (error) {

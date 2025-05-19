@@ -7,9 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/components/ui/use-toast";
 import { Search, Plus, BookOpen, Bookmark, Star, BookCheck } from "lucide-react";
 import Image from "next/image";
-
-// Configuração da API
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+import { api } from '@/config/api';
 
 interface AddBookDialogProps {
   onBookAdded: () => void;
@@ -42,34 +40,8 @@ export function AddBookDialog({ onBookAdded }: AddBookDialogProps) {
     
     setIsSearching(true);
     try {
-      const token = localStorage.getItem('access_token');
-      if (!token) {
-        throw new Error('Token não encontrado. Por favor, faça login novamente.');
-      }
-
       console.log('Buscando livros...', searchQuery);
-      const searchUrl = `${API_BASE_URL}/bookshelf/search?query=${encodeURIComponent(searchQuery)}`;
-      console.log('URL da busca:', searchUrl);
-
-      const response = await fetch(searchUrl, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        mode: 'cors',
-        credentials: 'include'
-      });
-      
-      console.log('Resposta da busca:', response.status);
-      
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ detail: 'Erro desconhecido' }));
-        console.error('Erro na busca:', errorData);
-        throw new Error(errorData.detail || 'Falha ao buscar livros');
-      }
-      
-      const data = await response.json();
+      const data = await api.searchBooks(searchQuery);
       console.log('Livros encontrados:', data);
       setSearchResults(data);
     } catch (error) {
@@ -101,41 +73,12 @@ export function AddBookDialog({ onBookAdded }: AddBookDialogProps) {
     
     setLoading(true);
     try {
-      const token = localStorage.getItem('access_token');
-      if (!token) {
-        throw new Error('Token não encontrado. Por favor, faça login novamente.');
-      }
-
       console.log('Adicionando livro...', selectedBook);
-      const response = await fetch(`${API_BASE_URL}/bookshelf`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        mode: 'cors',
-        credentials: 'include',
-        body: JSON.stringify({
-          book_id: selectedBook.id,
-          status: selectedStatus,
-          total_pages: selectedBook.num_pages || 0
-        }),
+      await api.addToBookshelf({
+        book_id: selectedBook.id,
+        status: selectedStatus,
+        total_pages: selectedBook.num_pages || 0
       });
-
-      console.log('Resposta da adição:', response.status);
-      
-      if (!response.ok) {
-        if (response.status === 401) {
-          throw new Error('Sessão expirada. Por favor, faça login novamente.');
-        }
-        
-        const errorData = await response.json().catch(() => ({ detail: 'Erro desconhecido' }));
-        console.error('Erro ao adicionar:', errorData);
-        throw new Error(errorData.detail || 'Falha ao adicionar livro');
-      }
-
-      const data = await response.json();
-      console.log('Livro adicionado:', data);
 
       toast({
         title: "Sucesso",
@@ -203,129 +146,126 @@ export function AddBookDialog({ onBookAdded }: AddBookDialogProps) {
             </Select>
           </div>
 
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="search" className="text-right text-purple-900 font-medium">
-              Buscar
+          <div className="space-y-2">
+            <Label htmlFor="search" className="text-purple-900 font-medium">
+              Buscar livro
             </Label>
-            <div className="col-span-3 flex gap-2">
+            <div className="flex gap-2">
               <Input
                 id="search"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                 placeholder="Digite o título, autor ou ISBN"
-                className="border-purple-200 focus:border-purple-500 font-sans"
+                className="flex-1"
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
               />
-              <Button 
+              <Button
                 onClick={handleSearch}
-                className="bg-purple-900 hover:bg-purple-950 text-white font-medium"
+                disabled={isSearching}
+                className="bg-purple-900 hover:bg-purple-950"
               >
-                <Search className="mr-2 h-4 w-4" />
-                Buscar
+                <Search className="h-4 w-4" />
               </Button>
             </div>
           </div>
-        </div>
-        {loading && (
-          <div className="flex justify-center py-4">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
-          </div>
-        )}
-        {error && (
-          <div className="text-red-600 text-sm py-2 font-sans">{error}</div>
-        )}
-        
-        {!selectedBook ? (
-          <div className="max-h-[300px] overflow-y-auto">
-            {searchResults.map((book) => (
-              <div
-                key={book.id}
-                className="flex items-center gap-4 p-4 hover:bg-purple-50 cursor-pointer rounded-lg transition-colors"
-                onClick={() => handleAddBook(book)}
-              >
-                {book.cover_url ? (
-                  <Image
-                    src={book.cover_url}
-                    alt={book.name}
-                    width={50}
-                    height={75}
-                    className="rounded shadow-md"
-                  />
-                ) : (
-                  <div className="w-[50px] h-[75px] bg-purple-100 rounded flex items-center justify-center shadow-md">
-                    <BookOpen className="w-6 h-6 text-purple-400" />
-                  </div>
-                )}
-                <div className="flex-1 min-w-0">
-                  <h3 className="card-title truncate">{book.name}</h3>
-                  {book.subtitle && (
-                    <p className="text-sm text-purple-700 truncate font-sans">{book.subtitle}</p>
-                  )}
-                  {book.category && (
-                    <div className="flex items-center gap-1 mt-1">
-                      <Bookmark className="w-3 h-3 text-purple-500" />
-                      <span className="text-xs text-purple-600 font-sans">{book.category}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <div className="flex items-center gap-4 p-4 bg-purple-50 rounded-lg">
-              {selectedBook.cover_url ? (
-                <Image
-                  src={selectedBook.cover_url}
-                  alt={selectedBook.name}
-                  width={50}
-                  height={75}
-                  className="rounded shadow-md"
-                />
-              ) : (
-                <div className="w-[50px] h-[75px] bg-purple-100 rounded flex items-center justify-center shadow-md">
-                  <BookOpen className="w-6 h-6 text-purple-400" />
-                </div>
-              )}
-              <div className="flex-1 min-w-0">
-                <h3 className="card-title truncate">{selectedBook.name}</h3>
-                {selectedBook.subtitle && (
-                  <p className="text-sm text-purple-700 truncate font-sans">{selectedBook.subtitle}</p>
-                )}
-              </div>
+
+          {isSearching && (
+            <div className="text-center py-4">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
+              <p className="mt-2 text-purple-700">Buscando livros...</p>
             </div>
-          </div>
-        )}
-        <DialogFooter>
-          {selectedBook ? (
-            <>
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={() => setSelectedBook(null)}
-                className="text-purple-700 hover:bg-purple-50 font-medium"
-              >
-                Voltar
-              </Button>
-              <Button 
-                type="button" 
-                onClick={handleConfirmAdd}
-                className="bg-purple-900 hover:bg-purple-950 text-white font-medium"
-                disabled={loading}
-              >
-                {loading ? 'Adicionando...' : 'Confirmar'}
-              </Button>
-            </>
-          ) : (
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={() => setOpen(false)}
-              className="text-purple-700 hover:bg-purple-50 font-medium"
-            >
-              Cancelar
-            </Button>
           )}
+
+          {!isSearching && searchResults.length > 0 && (
+            <div className="space-y-4 max-h-[300px] overflow-y-auto">
+              {searchResults.map((book) => (
+                <div
+                  key={book.id}
+                  className={`p-4 rounded-lg border cursor-pointer transition-colors ${
+                    selectedBook?.id === book.id
+                      ? 'border-purple-600 bg-purple-50'
+                      : 'border-gray-200 hover:border-purple-400'
+                  }`}
+                  onClick={() => handleAddBook(book)}
+                >
+                  <div className="flex gap-4">
+                    <div className="relative w-[80px] h-[120px] flex-shrink-0">
+                      {book.cover_url ? (
+                        <Image
+                          src={book.cover_url}
+                          alt={book.name}
+                          fill
+                          className="object-cover rounded"
+                          sizes="80px"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-purple-100 rounded flex items-center justify-center">
+                          <BookOpen className="w-8 h-8 text-purple-400" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-medium text-purple-900 mb-1 line-clamp-2">
+                        {book.name}
+                      </h3>
+                      {book.subtitle && (
+                        <p className="text-sm text-purple-700 mb-2 line-clamp-2">
+                          {book.subtitle}
+                        </p>
+                      )}
+                      <div className="flex items-center gap-2 text-sm text-purple-600">
+                        {book.publication_year && (
+                          <span className="flex items-center gap-1">
+                            <Bookmark className="w-4 h-4" />
+                            {book.publication_year}
+                          </span>
+                        )}
+                        {book.num_pages > 0 && (
+                          <span className="flex items-center gap-1">
+                            <BookOpen className="w-4 h-4" />
+                            {book.num_pages} páginas
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {!isSearching && searchQuery && searchResults.length === 0 && (
+            <div className="text-center py-4 text-purple-700">
+              Nenhum livro encontrado.
+            </div>
+          )}
+        </div>
+
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={() => setOpen(false)}
+            disabled={loading}
+          >
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleConfirmAdd}
+            disabled={!selectedBook || loading}
+            className="bg-purple-900 hover:bg-purple-950"
+          >
+            {loading ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                Adicionando...
+              </>
+            ) : (
+              <>
+                <Plus className="mr-2 h-4 w-4" />
+                Adicionar
+              </>
+            )}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

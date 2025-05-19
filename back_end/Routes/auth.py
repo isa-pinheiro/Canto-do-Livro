@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Body
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
@@ -9,12 +9,17 @@ import os
 import shutil
 from pathlib import Path
 from sqlalchemy import func, case
+from pydantic import BaseModel
 
-from models.base import get_db
-from models.user import User
-from configs.settings import settings
-from schemas.user import UserCreate, Token, TokenData, User as UserSchema, UserUpdate, UserResponse
-from auth.dependencies import get_current_user
+from back_end.models.base import get_db
+from back_end.models.user import User
+from back_end.configs.settings import settings
+from back_end.schemas.user import UserCreate, Token, TokenData, User as UserSchema, UserUpdate, UserResponse
+from back_end.auth import get_current_user
+
+class LoginData(BaseModel):
+    username: str
+    password: str
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -85,6 +90,7 @@ async def register(user_data: UserCreate, db: Session = Depends(get_db)):
 async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     try:
         print(f"Tentativa de login para usuário: {form_data.username}")
+        print(f"Dados recebidos: username={form_data.username}, password={'*' * len(form_data.password)}")
         
         # Authenticate user
         user = db.query(User).filter(User.username == form_data.username).first()
@@ -128,6 +134,65 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = 
             detail=f"Erro durante o login: {str(e)}"
         )
 
+@router.post("/login", response_model=Token)
+async def login_json(login_data: LoginData, db: Session = Depends(get_db)):
+    try:
+        print(f"Tentativa de login para usuário: {login_data.username}")
+        print(f"Dados recebidos: username={login_data.username}, password={'*' * len(login_data.password)}")
+        
+        # Authenticate user
+        user = db.query(User).filter(User.username == login_data.username).first()
+        if not user:
+            print(f"Usuário não encontrado: {login_data.username}")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Usuário ou senha inválidos",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        
+        if not verify_password(login_data.password, user.password_hash):
+            print(f"Senha inválida para usuário: {login_data.username}")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Usuário ou senha inválidos",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        
+        if user.disabled:
+            print(f"Usuário desabilitado: {login_data.username}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Usuário desabilitado"
+            )
+        
+        # Create access token
+        access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+        access_token = create_access_token(
+            data={"sub": str(user.id)},
+            expires_delta=access_token_expires
+        )
+
+        # Create refresh token (valid for 7 days)
+        refresh_token_expires = timedelta(days=7)
+        refresh_token = create_access_token(
+            data={"sub": str(user.id)},
+            expires_delta=refresh_token_expires
+        )
+        
+        print(f"Login bem-sucedido para usuário: {login_data.username}")
+        return {
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "token_type": "bearer"
+        }
+        
+    except Exception as e:
+        print(f"Erro durante o login: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erro durante o login: {str(e)}"
+        )
+
 @router.get("/me", response_model=UserResponse)
 async def get_current_user_profile(current_user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
     """
@@ -142,7 +207,7 @@ async def get_current_user_profile(current_user: dict = Depends(get_current_user
             )
 
         # Buscar estatísticas da estante
-        from models.bookshelf import UserBookshelf
+        from back_end.models.bookshelf import UserBookshelf
         bookshelf_stats = db.query(
             func.count(UserBookshelf.id).label('total'),
             func.sum(case((UserBookshelf.status == 'to_read', 1), else_=0)).label('want_to_read'),
@@ -281,7 +346,7 @@ async def update_user_info(
         db.refresh(user)
         
         # Buscar estatísticas da estante
-        from models.bookshelf import UserBookshelf
+        from back_end.models.bookshelf import UserBookshelf
         bookshelf_stats = db.query(
             func.count(UserBookshelf.id).label('total'),
             func.sum(case((UserBookshelf.status == 'to_read', 1), else_=0)).label('want_to_read'),
@@ -320,4 +385,69 @@ async def update_user_info(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Erro ao atualizar usuário: {str(e)}"
+        )
+
+@router.post("/refresh", response_model=Token)
+async def refresh_token(
+    refresh_data: dict = Body(...),
+    db: Session = Depends(get_db)
+):
+    """
+    Refresh the access token using a refresh token
+    """
+    try:
+        refresh_token = refresh_data.get("refresh_token")
+        if not refresh_token:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Refresh token is required"
+            )
+
+        # Decode the refresh token
+        try:
+            payload = jwt.decode(refresh_token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+            user_id = payload.get("sub")
+            if user_id is None:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid refresh token"
+                )
+        except JWTError:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid refresh token"
+            )
+
+        # Get user from database
+        user = db.query(User).filter(User.id == int(user_id)).first()
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="User not found"
+            )
+
+        # Create new access token
+        access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+        access_token = create_access_token(
+            data={"sub": str(user.id)},
+            expires_delta=access_token_expires
+        )
+
+        # Create new refresh token
+        refresh_token_expires = timedelta(days=7)
+        new_refresh_token = create_access_token(
+            data={"sub": str(user.id)},
+            expires_delta=refresh_token_expires
+        )
+
+        return {
+            "access_token": access_token,
+            "refresh_token": new_refresh_token,
+            "token_type": "bearer"
+        }
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error refreshing token: {str(e)}"
         )

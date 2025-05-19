@@ -1,8 +1,8 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from models.base import Base, engine
-from routes import auth, bookshelf
+from back_end.models.base import Base, engine
+from back_end.routes import auth, bookshelf, users
 import os
 from datetime import datetime
 
@@ -23,7 +23,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000"],  # Frontend URL
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allow_headers=["*"],
     expose_headers=["*"]
 )
@@ -34,6 +34,7 @@ app.mount("/api/static", StaticFiles(directory="uploads"), name="static")
 # Include routers with /api prefix
 app.include_router(auth.router, prefix="/api")
 app.include_router(bookshelf.router, prefix="/api")
+app.include_router(users.router, prefix="/api")
 
 @app.get("/")
 async def root():

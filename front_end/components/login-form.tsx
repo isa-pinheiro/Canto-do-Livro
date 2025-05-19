@@ -31,12 +31,15 @@ export default function LoginForm() {
       formData.append('username', username)
       formData.append('password', password)
 
-      const response = await fetch('http://localhost:8000/api/auth/token', {
+      const response = await fetch('http://localhost:8000/api/auth/login', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
+          'Content-Type': 'application/json',
         },
-        body: formData.toString(),
+        body: JSON.stringify({
+          username,
+          password
+        })
       })
 
       if (!response.ok) {
@@ -54,8 +57,9 @@ export default function LoginForm() {
 
       const tokenData = await response.json()
       
-      // Armazena o token no localStorage
+      // Armazena os tokens no localStorage
       localStorage.setItem('access_token', tokenData.access_token)
+      localStorage.setItem('refresh_token', tokenData.refresh_token)
       
       // Redireciona para a estante
       router.push("/bookshelf")

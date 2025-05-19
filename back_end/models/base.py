@@ -1,24 +1,18 @@
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-from configs.settings import settings
+from back_end.configs.settings import settings
 
-# Create SQLAlchemy engine
-engine = create_engine(
-    settings.DATABASE_URL,
-    pool_size=5,
-    max_overflow=10,
-    pool_timeout=30,
-    pool_recycle=1800
-)
+# Criar engine do SQLAlchemy
+engine = create_engine(settings.DATABASE_URL)
 
-# Create SessionLocal class
+# Criar sessão
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# Create Base class
+# Criar base para os modelos
 Base = declarative_base()
 
-# Dependency to get DB session
+# Função para obter a sessão do banco
 def get_db():
     db = SessionLocal()
     try:

@@ -9,21 +9,32 @@ class BookshelfStats(BaseModel):
     read: int
     favorite: int
 
+class UserSearchResponse(BaseModel):
+    id: int
+    username: str
+    full_name: Optional[str] = None
+    profile_picture: Optional[str] = None
+    created_at: datetime
+    bookshelf_stats: BookshelfStats
+
+    class Config:
+        from_attributes = True
+
 class UserBase(BaseModel):
     username: str
     email: EmailStr
-    full_name: str
+    full_name: Optional[str] = None
     profile_picture: Optional[str] = None
 
 class UserCreate(UserBase):
     password: str
 
 class UserUpdate(BaseModel):
-    username: Optional[str] = None
-    email: Optional[str] = None
+    email: Optional[EmailStr] = None
     full_name: Optional[str] = None
-    password: Optional[str] = None
+    profile_picture: Optional[str] = None
     current_password: Optional[str] = None
+    password: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -42,6 +53,7 @@ class User(UserInDB):
 
 class Token(BaseModel):
     access_token: str
+    refresh_token: str
     token_type: str
 
 class TokenData(BaseModel):
@@ -49,9 +61,8 @@ class TokenData(BaseModel):
 
 class UserResponse(UserBase):
     id: int
-    profile_picture: Optional[str] = None
-    bookshelf_stats: Optional[BookshelfStats] = None
     created_at: datetime
+    bookshelf_stats: Optional[BookshelfStats] = None
 
     class Config:
         from_attributes = True 

@@ -1,15 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
-from typing import List, Optional
+from typing import List, Optional, Literal
 from datetime import datetime
 from sqlalchemy import or_
-from fastapi import status
 
-from models.bookshelf import Book, UserBookshelf
-from models.base import get_db
-from schemas.book import BookCreate, Book as BookSchema
-from schemas.bookshelf import BookshelfEntry, BookshelfEntryUpdate, BookshelfEntryCreate
-from auth.dependencies import get_current_user
+from back_end.models.bookshelf import Book, UserBookshelf
+from back_end.models.base import get_db
+from back_end.schemas.book import BookCreate, Book as BookSchema
+from back_end.schemas.bookshelf import BookshelfEntry, BookshelfEntryUpdate, BookshelfEntryCreate
+from back_end.auth.auth import get_current_user
 
 router = APIRouter(prefix="/bookshelf", tags=["bookshelf"])
 
@@ -59,12 +58,16 @@ async def add_to_bookshelf(
                 detail="Este livro já está na sua estante"
             )
 
-        # Create bookshelf entry
+        # Create bookshelf entry with total_pages from book or provided value
+        total_pages = book_data.get("total_pages")
+        if total_pages is None:
+            total_pages = book.num_pages
+
         bookshelf = UserBookshelf(
             user_id=current_user["id"],
             book_id=book.id,
             status=book_data["status"],
-            total_pages=book_data.get("total_pages", book.num_pages or 0)
+            total_pages=total_pages
         )
         
         db.add(bookshelf)
@@ -82,45 +85,72 @@ async def add_to_bookshelf(
             detail=f"Erro ao adicionar livro à estante: {str(e)}"
         )
 
-@router.put("/{bookshelf_id}", response_model=BookshelfEntry)
-async def update_bookshelf(
-    bookshelf_id: int,
-    update_data: BookshelfEntryUpdate,
+@router.patch("/{entry_id}", response_model=BookshelfEntry)
+async def update_bookshelf_entry(
+    entry_id: int,
+    entry_update: BookshelfEntryUpdate,
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
+    """
+    Update a bookshelf entry
+    """
     try:
-        print(f"Atualizando estante {bookshelf_id} para usuário {current_user['id']}")
-        print(f"Dados de atualização: {update_data.dict()}")
+        print(f"Atualizando entrada {entry_id} para usuário {current_user['id']}")
+        print(f"Dados de atualização: {entry_update.dict()}")
         
-        bookshelf = db.query(UserBookshelf).filter(
-            UserBookshelf.id == bookshelf_id,
+        # Buscar a entrada na estante
+        bookshelf_entry = db.query(UserBookshelf).filter(
+            UserBookshelf.id == entry_id,
             UserBookshelf.user_id == current_user["id"]
         ).first()
-        
-        if not bookshelf:
-            print(f"Estante não encontrada: {bookshelf_id}")
-            raise HTTPException(status_code=404, detail="Bookshelf entry not found")
-        
-        print(f"Status atual: {bookshelf.status}")
-        print(f"Novo status: {update_data.status}")
-        
-        for key, value in update_data.dict(exclude_unset=True).items():
-            print(f"Atualizando {key} para {value}")
-            setattr(bookshelf, key, value)
-        
+
+        if not bookshelf_entry:
+            print(f"Entrada não encontrada: {entry_id}")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Bookshelf entry not found"
+            )
+
+        # Validar o status
+        valid_statuses = ['to_read', 'reading', 'read', 'favorite']
+        if entry_update.status and entry_update.status not in valid_statuses:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Status inválido. Deve ser um dos seguintes: {', '.join(valid_statuses)}"
+            )
+
+        # Atualizar campos
+        update_data = entry_update.dict(exclude_unset=True)
+        for field, value in update_data.items():
+            print(f"Atualizando {field} para {value}")
+            setattr(bookshelf_entry, field, value)
+
+        # Se estiver atualizando as páginas lidas, verificar se não excede o total
+        if 'pages_read' in update_data and bookshelf_entry.total_pages:
+            if update_data['pages_read'] > bookshelf_entry.total_pages:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Pages read cannot exceed total pages"
+                )
+            # Se leu todas as páginas, marcar como lido
+            if update_data['pages_read'] == bookshelf_entry.total_pages:
+                bookshelf_entry.status = 'read'
+
         db.commit()
-        db.refresh(bookshelf)
+        db.refresh(bookshelf_entry)
         
-        print(f"Estante atualizada com sucesso: {bookshelf.status}")
-        return bookshelf
-        
+        print(f"Entrada atualizada com sucesso: {bookshelf_entry.status}")
+        return bookshelf_entry
+
+    except HTTPException:
+        raise
     except Exception as e:
-        print(f"Erro ao atualizar estante: {str(e)}")
+        print(f"Erro ao atualizar entrada da estante: {str(e)}")
         db.rollback()
         raise HTTPException(
-            status_code=500,
-            detail=f"Erro ao atualizar estante: {str(e)}"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erro ao atualizar entrada da estante: {str(e)}"
         )
 
 @router.delete("/{bookshelf_id}")
@@ -201,64 +231,4 @@ async def get_book_details(
         raise HTTPException(
             status_code=500,
             detail=f"Erro ao buscar detalhes do livro: {str(e)}"
-        )
-
-@router.patch("/{entry_id}", response_model=BookshelfEntry)
-async def update_bookshelf_entry(
-    entry_id: int,
-    entry_update: BookshelfEntryUpdate,
-    current_user: dict = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """
-    Update a bookshelf entry
-    """
-    try:
-        print(f"Atualizando entrada {entry_id} para usuário {current_user['id']}")
-        print(f"Dados de atualização: {entry_update.dict()}")
-        
-        # Buscar a entrada na estante
-        bookshelf_entry = db.query(UserBookshelf).filter(
-            UserBookshelf.id == entry_id,
-            UserBookshelf.user_id == current_user["id"]
-        ).first()
-
-        if not bookshelf_entry:
-            print(f"Entrada não encontrada: {entry_id}")
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Bookshelf entry not found"
-            )
-
-        # Atualizar campos
-        update_data = entry_update.dict(exclude_unset=True)
-        for field, value in update_data.items():
-            print(f"Atualizando {field} para {value}")
-            setattr(bookshelf_entry, field, value)
-
-        # Se estiver atualizando as páginas lidas, verificar se não excede o total
-        if 'pages_read' in update_data and bookshelf_entry.total_pages:
-            if update_data['pages_read'] > bookshelf_entry.total_pages:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Pages read cannot exceed total pages"
-                )
-            # Se leu todas as páginas, marcar como lido
-            if update_data['pages_read'] == bookshelf_entry.total_pages:
-                bookshelf_entry.status = 'read'
-
-        db.commit()
-        db.refresh(bookshelf_entry)
-        
-        print(f"Entrada atualizada com sucesso: {bookshelf_entry.status}")
-        return bookshelf_entry
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        print(f"Erro ao atualizar entrada da estante: {str(e)}")
-        db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Erro ao atualizar entrada da estante: {str(e)}"
         ) 

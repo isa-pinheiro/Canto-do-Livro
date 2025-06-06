@@ -343,11 +343,11 @@ export default function ProfilePage() {
                     />
                   </div>
                   <div className="flex gap-2">
-                    <Button onClick={handleSave}>
+                    <Button onClick={handleSave} className="bg-purple-900 hover:bg-purple-800">
                       <Save className="w-4 h-4 mr-2" />
                       Salvar
                     </Button>
-                    <Button variant="ghost" onClick={() => setEditing(false)}>
+                    <Button variant="ghost" onClick={() => setEditing(false)} className="text-purple-900 hover:text-purple-800 hover:bg-purple-50">
                       <X className="w-4 h-4 mr-2" />
                       Cancelar
                     </Button>
@@ -367,7 +367,7 @@ export default function ProfilePage() {
                     <Label>Nome completo</Label>
                     <p className="text-gray-700">{userData?.full_name}</p>
                   </div>
-                  <Button onClick={() => setEditing(true)}>
+                  <Button onClick={() => setEditing(true)} className="bg-purple-900 hover:bg-purple-800">
                     Editar perfil
                   </Button>
                 </div>

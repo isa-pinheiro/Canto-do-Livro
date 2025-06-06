@@ -93,7 +93,7 @@ async function apiRequest<T>(
 export const api = {
   // Auth
   login: async (credentials: { username: string; password: string }) => {
-    const response = await fetch(`${API_BASE_URL}/auth/login`, {
+    const response = await fetch(`${API_BASE_URL}/auth/login_json`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(credentials),
@@ -131,7 +131,7 @@ export const api = {
   },
 
   // User
-  getCurrentUser: () => apiRequest('/auth/me'),
+  getCurrentUser: () => apiRequest<UserProfile>('/auth/me'),
   updateUser: (data: any) => apiRequest('/auth/me', {
     method: 'PATCH',
     body: JSON.stringify(data),

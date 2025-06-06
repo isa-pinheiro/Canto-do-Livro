@@ -36,28 +36,13 @@ export default function ProfilePage() {
   const [formData, setFormData] = useState({
     username: '',
     email: '',
+    full_name: '',
     current_password: '',
     new_password: '',
     confirm_password: ''
   });
+  const [userData, setUserData] = useState<UserProfile | null>(null);
   const { toast } = useToast();
-  const [userData, setUserData] = useState<{
-    username: string;
-    email: string;
-    full_name: string;
-    profile_picture?: string;
-    bookshelf_stats?: {
-      total: number;
-      want_to_read: number;
-      reading: number;
-      read: number;
-      favorite: number;
-    };
-  }>({
-    username: '',
-    email: '',
-    full_name: '',
-  });
 
   useEffect(() => {
     const token = localStorage.getItem('access_token');
@@ -82,25 +67,19 @@ export default function ProfilePage() {
     try {
       setLoading(true);
       const data = await api.getCurrentUser();
-      setProfile(data);
-      setUserData({
-        ...data,
-        bookshelf_stats: {
-          total: 0,
-          want_to_read: 0,
-          reading: 0,
-          read: 0,
-          favorite: 0,
-          ...data.bookshelf_stats
-        }
-      });
-      setFormData({
-        username: data.username,
-        email: data.email,
-        current_password: '',
-        new_password: '',
-        confirm_password: ''
-      });
+      if (data) {
+        setUserData(data);
+        setFormData({
+          username: data.username,
+          email: data.email,
+          full_name: data.full_name,
+          current_password: '',
+          new_password: '',
+          confirm_password: ''
+        });
+      } else {
+        throw new Error('Dados do usuário não encontrados');
+      }
     } catch (error) {
       console.error('Erro ao carregar perfil:', error);
       
@@ -143,6 +122,7 @@ export default function ProfilePage() {
       const updateData: any = {
         username: formData.username,
         email: formData.email,
+        full_name: formData.full_name,
       };
 
       if (formData.new_password) {
@@ -208,10 +188,10 @@ export default function ProfilePage() {
       }
 
       const data = await response.json();
-      setUserData(prev => ({
+      setUserData(prev => prev ? {
         ...prev,
         profile_picture: data.profile_picture
-      }));
+      } : null);
 
       toast({
         title: "Sucesso",
@@ -256,16 +236,16 @@ export default function ProfilePage() {
           <div className="flex flex-col md:flex-row gap-8">
             <div className="flex-shrink-0">
               <div className="relative w-32 h-32 rounded-full overflow-hidden bg-purple-200">
-                {userData.profile_picture ? (
+                {userData?.profile_picture ? (
                   <Image
                     src={userData.profile_picture}
-                    alt={userData.username}
+                    alt="Foto de perfil"
                     fill
                     className="object-cover"
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
-                    <User className="w-16 h-16 text-purple-600" />
+                    <User className="w-16 h-16 text-purple-400" />
                   </div>
                 )}
                 <input
@@ -278,18 +258,21 @@ export default function ProfilePage() {
                 <button
                   onClick={() => fileInputRef.current?.click()}
                   disabled={uploading}
-                  className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white py-1 text-sm hover:bg-opacity-70 transition-colors"
+                  className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white py-1 text-sm flex items-center justify-center hover:bg-opacity-60 transition-opacity"
                 >
                   {uploading ? (
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mx-auto"></div>
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
                   ) : (
-                    <Camera className="w-4 h-4 mx-auto" />
+                    <>
+                      <Camera className="w-4 h-4 mr-1" />
+                      Alterar foto
+                    </>
                   )}
                 </button>
               </div>
             </div>
 
-            <div className="flex-1">
+            <div className="flex-grow">
               {editing ? (
                 <div className="space-y-4">
                   <div>
@@ -308,6 +291,15 @@ export default function ProfilePage() {
                       name="email"
                       type="email"
                       value={formData.email}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="full_name">Nome completo</Label>
+                    <Input
+                      id="full_name"
+                      name="full_name"
+                      value={formData.full_name}
                       onChange={handleInputChange}
                     />
                   </div>
@@ -342,15 +334,11 @@ export default function ProfilePage() {
                     />
                   </div>
                   <div className="flex gap-2">
-                    <Button onClick={handleSave} className="bg-purple-600 hover:bg-purple-700">
+                    <Button onClick={handleSave}>
                       <Save className="w-4 h-4 mr-2" />
                       Salvar
                     </Button>
-                    <Button
-                      onClick={() => setEditing(false)}
-                      variant="ghost"
-                      className="text-gray-600 hover:text-gray-700"
-                    >
+                    <Button variant="ghost" onClick={() => setEditing(false)}>
                       <X className="w-4 h-4 mr-2" />
                       Cancelar
                     </Button>
@@ -360,20 +348,17 @@ export default function ProfilePage() {
                 <div className="space-y-4">
                   <div>
                     <Label>Nome de usuário</Label>
-                    <p className="text-gray-700">{userData.username}</p>
+                    <p className="text-gray-700">{userData?.username}</p>
                   </div>
                   <div>
                     <Label>Email</Label>
-                    <p className="text-gray-700">{userData.email}</p>
+                    <p className="text-gray-700">{userData?.email}</p>
                   </div>
                   <div>
                     <Label>Nome completo</Label>
-                    <p className="text-gray-700">{userData.full_name || 'Não definido'}</p>
+                    <p className="text-gray-700">{userData?.full_name}</p>
                   </div>
-                  <Button
-                    onClick={() => setEditing(true)}
-                    className="bg-purple-600 hover:bg-purple-700"
-                  >
+                  <Button onClick={() => setEditing(true)}>
                     Editar perfil
                   </Button>
                 </div>
@@ -381,29 +366,29 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {userData.bookshelf_stats && (
-            <div className="mt-8 pt-8 border-t border-gray-200">
+          {userData?.bookshelf_stats && (
+            <div className="mt-8 pt-8 border-t">
               <h2 className="text-xl font-heading text-purple-900 mb-4">Estatísticas da Estante</h2>
               <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                 <div className="bg-purple-50 p-4 rounded-lg text-center">
-                  <p className="text-sm text-purple-600">Total</p>
                   <p className="text-2xl font-bold text-purple-900">{userData.bookshelf_stats.total}</p>
+                  <p className="text-sm text-purple-700">Total</p>
                 </div>
                 <div className="bg-purple-50 p-4 rounded-lg text-center">
-                  <p className="text-sm text-purple-600">Quero ler</p>
                   <p className="text-2xl font-bold text-purple-900">{userData.bookshelf_stats.want_to_read}</p>
+                  <p className="text-sm text-purple-700">Quero ler</p>
                 </div>
                 <div className="bg-purple-50 p-4 rounded-lg text-center">
-                  <p className="text-sm text-purple-600">Lendo</p>
                   <p className="text-2xl font-bold text-purple-900">{userData.bookshelf_stats.reading}</p>
+                  <p className="text-sm text-purple-700">Lendo</p>
                 </div>
                 <div className="bg-purple-50 p-4 rounded-lg text-center">
-                  <p className="text-sm text-purple-600">Lidos</p>
                   <p className="text-2xl font-bold text-purple-900">{userData.bookshelf_stats.read}</p>
+                  <p className="text-sm text-purple-700">Lidos</p>
                 </div>
                 <div className="bg-purple-50 p-4 rounded-lg text-center">
-                  <p className="text-sm text-purple-600">Favoritos</p>
                   <p className="text-2xl font-bold text-purple-900">{userData.bookshelf_stats.favorite}</p>
+                  <p className="text-sm text-purple-700">Favoritos</p>
                 </div>
               </div>
             </div>
@@ -412,4 +397,4 @@ export default function ProfilePage() {
       </div>
     </div>
   );
-} 
+}

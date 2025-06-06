@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import Link from 'next/link';
+import { api } from '@/config/api';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -64,41 +65,35 @@ export default function RegisterPage() {
     }
 
     try {
-      const response = await fetch('http://localhost:8000/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify({
-          username: formData.username,
-          email: formData.email,
-          password: formData.password,
-          full_name: formData.full_name
-        })
+      const data = await api.register({
+        username: formData.username,
+        email: formData.email,
+        password: formData.password,
+        full_name: formData.full_name
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        if (response.status === 400) {
-          if (data.detail.includes('username')) {
-            throw new Error('Este nome de usuário já está em uso');
-          } else if (data.detail.includes('email')) {
-            throw new Error('Este email já está em uso');
-          } else {
-            throw new Error(data.detail || 'Dados inválidos');
-          }
-        } else {
-          throw new Error(data.detail || 'Erro ao criar conta');
-        }
+      if (data.access_token) {
+        localStorage.setItem('access_token', data.access_token);
+        localStorage.setItem('refresh_token', data.refresh_token);
+        toast({
+          title: "Sucesso",
+          description: "Conta criada com sucesso!",
+        });
+        router.push('/bookshelf');
       }
-
-      localStorage.setItem('access_token', data.access_token);
-      router.push('/bookshelf');
     } catch (error) {
       console.error('Erro no registro:', error);
-      setError(error instanceof Error ? error.message : 'Erro ao criar conta');
+      if (error instanceof Error) {
+        if (error.message.includes('username')) {
+          setError('Este nome de usuário já está em uso');
+        } else if (error.message.includes('email')) {
+          setError('Este email já está em uso');
+        } else {
+          setError(error.message || 'Erro ao criar conta');
+        }
+      } else {
+        setError('Erro ao criar conta');
+      }
     } finally {
       setLoading(false);
     }

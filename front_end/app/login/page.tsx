@@ -26,26 +26,28 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
 
-    const formData = new FormData(e.currentTarget);
-    const username = formData.get('username') as string;
-    const password = formData.get('password') as string;
+    const username = (e.currentTarget.elements[0] as HTMLInputElement).value;
+    const password = (e.currentTarget.elements[1] as HTMLInputElement).value;
 
     try {
       console.log('Iniciando tentativa de login...');
       console.log('Dados sendo enviados:', { username, password: '****' });
 
-      const response = await fetch('http://localhost:8000/api/auth/login', {
+      const response = await fetch('http://localhost:8000/api/auth/token', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/x-www-form-urlencoded',
         },
-        body: JSON.stringify({
+        body: new URLSearchParams({
+          grant_type: 'password',
           username,
-          password
-        })
+          password,
+          scope: ''
+        }).toString()
       });
 
       console.log('Resposta do servidor:', response.status);
+      console.log('Headers da resposta:', response.headers);
       
       let data;
       try {

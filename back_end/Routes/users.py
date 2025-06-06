@@ -10,6 +10,149 @@ from sqlalchemy import func, case, or_
 
 router = APIRouter(prefix="/users", tags=["users"])
 
+# Endpoints de gerenciamento de seguidores
+@router.post("/{user_id}/follow", response_model=UserResponse)
+async def follow_user(
+    user_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    if user_id == current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Você não pode seguir a si mesmo"
+        )
+    
+    user_to_follow = db.query(User).filter(User.id == user_id).first()
+    if not user_to_follow:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Usuário não encontrado"
+        )
+    
+    if user_to_follow in current_user.following:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Você já segue este usuário"
+        )
+    
+    current_user.following.append(user_to_follow)
+    db.commit()
+    db.refresh(current_user)
+    return current_user
+
+@router.delete("/{user_id}/unfollow", response_model=UserResponse)
+async def unfollow_user(
+    user_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    if user_id == current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Você não pode deixar de seguir a si mesmo"
+        )
+    
+    user_to_unfollow = db.query(User).filter(User.id == user_id).first()
+    if not user_to_unfollow:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Usuário não encontrado"
+        )
+    
+    if user_to_unfollow not in current_user.following:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Você não segue este usuário"
+        )
+    
+    current_user.following.remove(user_to_unfollow)
+    db.commit()
+    db.refresh(current_user)
+    return current_user
+
+@router.get("/{user_id}/followers", response_model=List[UserSearchResponse])
+async def get_user_followers(
+    user_id: int,
+    db: Session = Depends(get_db)
+):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Usuário não encontrado"
+        )
+    followers = user.followers
+    results = []
+    for follower in followers:
+        # Get bookshelf stats for each follower
+        bookshelf_stats = db.query(
+            func.count(UserBookshelf.id).label('total'),
+            func.sum(case((UserBookshelf.status == 'to_read', 1), else_=0)).label('want_to_read'),
+            func.sum(case((UserBookshelf.status == 'reading', 1), else_=0)).label('reading'),
+            func.sum(case((UserBookshelf.status == 'read', 1), else_=0)).label('read'),
+            func.sum(case((UserBookshelf.status == 'favorite', 1), else_=0)).label('favorite')
+        ).filter(UserBookshelf.user_id == follower.id).first()
+
+        stats_dict = {
+            'total': bookshelf_stats.total or 0,
+            'want_to_read': bookshelf_stats.want_to_read or 0,
+            'reading': bookshelf_stats.reading or 0,
+            'read': bookshelf_stats.read or 0,
+            'favorite': bookshelf_stats.favorite or 0
+        }
+
+        results.append({
+            "id": follower.id,
+            "username": follower.username,
+            "full_name": follower.full_name,
+            "profile_picture": follower.profile_picture,
+            "created_at": follower.created_at,
+            "bookshelf_stats": stats_dict
+        })
+    return results
+
+@router.get("/{user_id}/following", response_model=List[UserSearchResponse])
+async def get_user_following(
+    user_id: int,
+    db: Session = Depends(get_db)
+):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Usuário não encontrado"
+        )
+    following = user.following
+    results = []
+    for followed in following:
+        # Get bookshelf stats for each followed
+        bookshelf_stats = db.query(
+            func.count(UserBookshelf.id).label('total'),
+            func.sum(case((UserBookshelf.status == 'to_read', 1), else_=0)).label('want_to_read'),
+            func.sum(case((UserBookshelf.status == 'reading', 1), else_=0)).label('reading'),
+            func.sum(case((UserBookshelf.status == 'read', 1), else_=0)).label('read'),
+            func.sum(case((UserBookshelf.status == 'favorite', 1), else_=0)).label('favorite')
+        ).filter(UserBookshelf.user_id == followed.id).first()
+
+        stats_dict = {
+            'total': bookshelf_stats.total or 0,
+            'want_to_read': bookshelf_stats.want_to_read or 0,
+            'reading': bookshelf_stats.reading or 0,
+            'read': bookshelf_stats.read or 0,
+            'favorite': bookshelf_stats.favorite or 0
+        }
+
+        results.append({
+            "id": followed.id,
+            "username": followed.username,
+            "full_name": followed.full_name,
+            "profile_picture": followed.profile_picture,
+            "created_at": followed.created_at,
+            "bookshelf_stats": stats_dict
+        })
+    return results
+
 @router.get("/me", response_model=UserResponse)
 async def get_current_user_info(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     try:

@@ -4,26 +4,26 @@ from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 from typing import Optional
-from passlib.context import CryptContext
 
 from ..models.base import get_db
 from ..models.user import User
 from ..configs.settings import settings
 from ..schemas.user import TokenData
+from ..services.user_factory import UserFactory
 
 # Configuração do OAuth2
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
-# Configuração do contexto de senha
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# Instância da UserFactory
+user_factory = UserFactory()
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verifica se a senha está correta"""
-    return pwd_context.verify(plain_password, hashed_password)
+    return user_factory.pwd_context.verify(plain_password, hashed_password)
 
 def get_password_hash(password: str) -> str:
     """Gera o hash da senha"""
-    return pwd_context.hash(password)
+    return user_factory.pwd_context.hash(password)
 
 def authenticate_user(db: Session, username: str, password: str) -> Optional[User]:
     """Autentica um usuário com username e senha"""
@@ -57,26 +57,40 @@ async def get_current_user(
     )
     
     try:
+        print(f"Token recebido: {token}")
+        print(f"Chave secreta: {settings.SECRET_KEY}")
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        print(f"Payload decodificado: {payload}")
         user_id: str = payload.get("sub")
         if user_id is None:
+            print("ID do usuário não encontrado no token")
             raise credentials_exception
-        token_data = TokenData(username=user_id)
-    except JWTError:
+        print(f"ID do usuário encontrado: {user_id}")
+        
+        # Buscar usuário diretamente pelo ID
+        user = db.query(User).filter(User.id == int(user_id)).first()
+        if user is None:
+            print("Usuário não encontrado no banco de dados")
+            raise credentials_exception
+        print(f"Usuário encontrado: {user.username}")
+        
+        return {
+            "id": user.id,
+            "username": user.username,
+            "email": user.email,
+            "full_name": user.full_name,
+            "profile_picture": user.profile_picture,
+            "created_at": user.created_at
+        }
+    except JWTError as e:
+        print(f"Erro ao decodificar token: {str(e)}")
         raise credentials_exception
-    
-    user = db.query(User).filter(User.id == int(token_data.username)).first()
-    if user is None:
+    except ValueError as e:
+        print(f"Erro ao converter ID do usuário: {str(e)}")
         raise credentials_exception
-    
-    return {
-        "id": user.id,
-        "username": user.username,
-        "email": user.email,
-        "full_name": user.full_name,
-        "profile_picture": user.profile_picture,
-        "created_at": user.created_at
-    }
+    except Exception as e:
+        print(f"Erro inesperado: {str(e)}")
+        raise credentials_exception
 
 async def get_current_active_user(
     current_user: dict = Depends(get_current_user)

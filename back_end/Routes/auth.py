@@ -4,7 +4,6 @@ from sqlalchemy.orm import Session
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 import os
 import shutil
 from pathlib import Path
@@ -18,6 +17,7 @@ from back_end.schemas.user import UserCreate, Token, TokenData, User as UserSche
 from back_end.auth import get_current_user
 from back_end.services.auth_service import AuthService
 from back_end.services.user_service import UserService
+from back_end.services.user_factory import UserFactory
 
 class LoginData(BaseModel):
     username: str
@@ -25,23 +25,7 @@ class LoginData(BaseModel):
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
-
-def get_password_hash(password: str) -> str:
-    return pwd_context.hash(password)
-
-def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
-    to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.utcnow() + expires_delta
-    else:
-        expire = datetime.utcnow() + timedelta(minutes=15)
-    to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
-    return encoded_jwt
+user_factory = UserFactory()
 
 @router.post("/register", response_model=Token)
 async def register(user_data: UserCreate, db: Session = Depends(get_db)):
@@ -134,6 +118,3 @@ async def refresh_token(
     db: Session = Depends(get_db)
 ):
     auth_service = AuthService()
-    # Implement refresh token logic here
-    # This part remains the same as it's specific to token refresh
-    # ... existing refresh token code ...

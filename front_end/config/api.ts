@@ -22,6 +22,7 @@ async function apiRequest<T>(
       if (!token) {
         throw new Error('Sessão expirada');
       }
+      console.log('Token sendo usado:', token);
       headers['Authorization'] = `Bearer ${token}`;
     }
 

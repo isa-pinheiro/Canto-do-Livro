@@ -8,17 +8,18 @@ from passlib.context import CryptContext
 from back_end.models.user import User
 from back_end.models.bookshelf import UserBookshelf
 from back_end.schemas.user import UserResponse, UserUpdate, UserSearchResponse
+from back_end.services.user_factory import UserFactory
 
 class UserService:
     def __init__(self, db: Session):
         self.db = db
-        self.pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+        self.user_factory = UserFactory()
 
     def verify_password(self, plain_password: str, hashed_password: str) -> bool:
-        return self.pwd_context.verify(plain_password, hashed_password)
+        return self.user_factory.pwd_context.verify(plain_password, hashed_password)
 
     def get_password_hash(self, password: str) -> str:
-        return self.pwd_context.hash(password)
+        return self.user_factory.pwd_context.hash(password)
 
     def get_user_by_id(self, user_id: int) -> User:
         user = self.db.query(User).filter(User.id == user_id).first()
@@ -193,6 +194,13 @@ class UserService:
             if value is not None:  # Só atualiza se o valor não for None
                 setattr(user, field, value)
         
-        self.db.commit()
-        self.db.refresh(user)
-        return user 
+        try:
+            self.db.commit()
+            self.db.refresh(user)
+            return user
+        except Exception as e:
+            self.db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Erro ao atualizar perfil: {str(e)}"
+            ) 

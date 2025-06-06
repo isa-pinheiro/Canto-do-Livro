@@ -127,10 +127,20 @@ export default function ProfilePage() {
 
       if (formData.new_password) {
         updateData.current_password = formData.current_password;
-        updateData.new_password = formData.new_password;
+        updateData.password = formData.new_password;
       }
 
-      await api.updateUser(updateData);
+      const updatedUser = await api.updateUser(updateData) as UserProfile;
+      
+      setUserData(updatedUser);
+      setFormData({
+        username: updatedUser.username,
+        email: updatedUser.email,
+        full_name: updatedUser.full_name,
+        current_password: '',
+        new_password: '',
+        confirm_password: ''
+      });
       
       toast({
         title: "Sucesso",
@@ -138,12 +148,11 @@ export default function ProfilePage() {
       });
       
       setEditing(false);
-      fetchProfile();
     } catch (error) {
       console.error('Erro ao atualizar perfil:', error);
       
       if (error instanceof Error) {
-        if (error.message.includes('Token não encontrado') || error.message.includes('Sessão expirada')) {
+        if (error.message.includes('Sessão expirada')) {
           handleAuthError();
           return;
         }

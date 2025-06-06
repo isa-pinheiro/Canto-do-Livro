@@ -363,9 +363,10 @@ async def update_user_info(
             user.password_hash = get_password_hash(user_update.password)
         
         # Atualizar outros campos
-        update_data = user_update.dict(exclude_unset=True, exclude={'password', 'current_password'})
+        update_data = user_update.dict(exclude={'password', 'current_password'})
         for field, value in update_data.items():
-            setattr(user, field, value)
+            if value is not None:  # Só atualiza se o valor não for None
+                setattr(user, field, value)
         
         db.commit()
         db.refresh(user)

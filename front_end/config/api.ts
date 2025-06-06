@@ -49,10 +49,15 @@ async function apiRequest<T>(
         });
 
         if (!refreshResponse.ok) {
-          throw new Error('Falha ao renovar token');
+          const errorData = await refreshResponse.json().catch(() => ({}));
+          throw new Error(errorData.detail || 'Falha ao renovar token');
         }
 
         const data = await refreshResponse.json();
+        if (!data.access_token || !data.refresh_token) {
+          throw new Error('Tokens inválidos recebidos do servidor');
+        }
+
         localStorage.setItem('access_token', data.access_token);
         localStorage.setItem('refresh_token', data.refresh_token);
 
@@ -63,7 +68,7 @@ async function apiRequest<T>(
         // Se não conseguiu renovar o token, limpa os tokens e redireciona para login
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
-        throw new Error('Sessão expirada');
+        throw new Error('Sessão expirada. Por favor, faça login novamente.');
       }
     }
 

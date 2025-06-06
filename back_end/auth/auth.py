@@ -3,36 +3,34 @@ from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import Optional, Dict, Any
 
 from ..models.base import get_db
 from ..models.user import User
 from ..configs.settings import settings
 from ..schemas.user import TokenData
-from ..services.user_factory import UserFactory
+from .auth_context import AuthenticationContext
+from .auth_strategies import PasswordAuthenticationStrategy, OAuthAuthenticationStrategy, SSOAuthenticationStrategy
+from .utils import verify_password, get_password_hash
 
 # Configuração do OAuth2
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
-# Instância da UserFactory
-user_factory = UserFactory()
+# Instância do contexto de autenticação
+auth_context = AuthenticationContext()
 
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verifica se a senha está correta"""
-    return user_factory.pwd_context.verify(plain_password, hashed_password)
-
-def get_password_hash(password: str) -> str:
-    """Gera o hash da senha"""
-    return user_factory.pwd_context.hash(password)
-
-def authenticate_user(db: Session, username: str, password: str) -> Optional[User]:
-    """Autentica um usuário com username e senha"""
-    user = db.query(User).filter(User.username == username).first()
-    if not user:
-        return None
-    if not verify_password(password, user.password_hash):
-        return None
-    return user
+def authenticate_user(db: Session, credentials: Dict[str, Any], auth_type: str = "password") -> Optional[User]:
+    """Autentica um usuário usando a estratégia apropriada"""
+    if auth_type == "password":
+        auth_context.set_strategy(PasswordAuthenticationStrategy())
+    elif auth_type == "oauth":
+        auth_context.set_strategy(OAuthAuthenticationStrategy())
+    elif auth_type == "sso":
+        auth_context.set_strategy(SSOAuthenticationStrategy())
+    else:
+        raise ValueError(f"Tipo de autenticação não suportado: {auth_type}")
+    
+    return auth_context.authenticate(db, credentials)
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     """Cria um token JWT"""

@@ -169,6 +169,24 @@ class UserService:
             # Atualizar a senha
             user.password_hash = self.get_password_hash(user_update.password)
         
+        # Verificar se o novo username já está em uso
+        if user_update.username and user_update.username != user.username:
+            existing_user = self.db.query(User).filter(User.username == user_update.username).first()
+            if existing_user:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Este nome de usuário já está em uso"
+                )
+        
+        # Verificar se o novo email já está em uso
+        if user_update.email and user_update.email != user.email:
+            existing_user = self.db.query(User).filter(User.email == user_update.email).first()
+            if existing_user:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Este email já está em uso"
+                )
+        
         # Atualizar outros campos
         update_data = user_update.dict(exclude={'password', 'current_password'})
         for field, value in update_data.items():

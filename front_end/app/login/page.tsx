@@ -60,7 +60,7 @@ export default function LoginPage() {
 
       if (!response.ok) {
         if (response.status === 401) {
-          throw new Error('Email ou senha incorretos');
+          throw new Error(data.detail || 'Nome de usuário não encontrado ou senha incorreta');
         } else if (response.status === 400) {
           throw new Error(data.detail || 'Usuário desabilitado');
         } else {

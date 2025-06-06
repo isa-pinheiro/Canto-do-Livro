@@ -42,6 +42,7 @@ export default function ProfilePage() {
     confirm_password: ''
   });
   const [userData, setUserData] = useState<UserProfile | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const { toast } = useToast();
 
   useEffect(() => {
@@ -108,14 +109,59 @@ export default function ProfilePage() {
     }));
   };
 
+  const validateForm = () => {
+    const errors: Record<string, string> = {};
+    
+    // Username validation
+    if (!formData.username) {
+      errors.username = 'Nome de usuário é obrigatório';
+    } else if (formData.username.length < 3) {
+      errors.username = 'Nome de usuário deve ter pelo menos 3 caracteres';
+    }
+
+    // Email validation
+    if (!formData.email) {
+      errors.email = 'Email é obrigatório';
+    } else {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(formData.email)) {
+        errors.email = 'Email inválido';
+      }
+    }
+
+    // Full name validation
+    if (!formData.full_name) {
+      errors.full_name = 'Nome completo é obrigatório';
+    }
+
+    // Password validation (only if changing password)
+    if (formData.new_password) {
+      if (!formData.current_password) {
+        errors.current_password = 'Senha atual é obrigatória para alterar a senha';
+      }
+
+      if (formData.new_password.length < 8) {
+        errors.new_password = 'A senha deve ter pelo menos 8 caracteres';
+      } else if (!/[A-Z]/.test(formData.new_password)) {
+        errors.new_password = 'A senha deve conter pelo menos uma letra maiúscula';
+      } else if (!/[a-z]/.test(formData.new_password)) {
+        errors.new_password = 'A senha deve conter pelo menos uma letra minúscula';
+      } else if (!/[0-9]/.test(formData.new_password)) {
+        errors.new_password = 'A senha deve conter pelo menos um número';
+      }
+
+      if (formData.new_password !== formData.confirm_password) {
+        errors.confirm_password = 'As senhas não coincidem';
+      }
+    }
+
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleSave = async () => {
     try {
-      if (formData.new_password && formData.new_password !== formData.confirm_password) {
-        toast({
-          title: "Erro",
-          description: "As senhas não coincidem",
-          variant: "destructive",
-        });
+      if (!validateForm()) {
         return;
       }
 
@@ -130,39 +176,68 @@ export default function ProfilePage() {
         updateData.password = formData.new_password;
       }
 
-      const updatedUser = await api.updateUser(updateData) as UserProfile;
-      
-      setUserData(updatedUser);
-      setFormData({
-        username: updatedUser.username,
-        email: updatedUser.email,
-        full_name: updatedUser.full_name,
-        current_password: '',
-        new_password: '',
-        confirm_password: ''
-      });
-      
-      toast({
-        title: "Sucesso",
-        description: "Perfil atualizado com sucesso",
-      });
-      
-      setEditing(false);
-    } catch (error) {
-      console.error('Erro ao atualizar perfil:', error);
-      
-      if (error instanceof Error) {
-        if (error.message.includes('Sessão expirada')) {
+      console.log('Enviando dados para atualização:', updateData);
+
+      try {
+        const updatedUser = await api.updateUser(updateData) as UserProfile;
+        console.log('Usuário atualizado com sucesso:', updatedUser);
+        
+        setUserData(updatedUser);
+        setFormData({
+          username: updatedUser.username,
+          email: updatedUser.email,
+          full_name: updatedUser.full_name,
+          current_password: '',
+          new_password: '',
+          confirm_password: ''
+        });
+        
+        toast({
+          title: "Sucesso",
+          description: "Perfil atualizado com sucesso",
+        });
+        
+        setEditing(false);
+        setFieldErrors({});
+      } catch (apiError: any) {
+        console.log('Erro na API:', apiError);
+        
+        if (apiError.message?.includes('Sessão expirada')) {
           handleAuthError();
           return;
         }
-        
+
+        const errorMessage = apiError.message?.toLowerCase() || '';
+        console.log('Mensagem de erro processada:', errorMessage);
+
+        if (errorMessage.includes('nome de usuário já está em uso')) {
+          setFieldErrors(prev => ({ ...prev, username: 'Este nome de usuário já está sendo usado por outro usuário' }));
+          return;
+        }
+
+        if (errorMessage.includes('email já está em uso')) {
+          setFieldErrors(prev => ({ ...prev, email: 'Este email já está sendo usado por outro usuário' }));
+          return;
+        }
+
+        if (errorMessage.includes('senha atual incorreta')) {
+          setFieldErrors(prev => ({ ...prev, current_password: 'A senha atual está incorreta' }));
+          return;
+        }
+
         toast({
           title: "Erro",
-          description: error.message,
+          description: apiError.message || "Ocorreu um erro ao atualizar o perfil",
           variant: "destructive",
         });
       }
+    } catch (error: any) {
+      console.log('Erro geral:', error);
+      toast({
+        title: "Erro",
+        description: "Ocorreu um erro inesperado ao atualizar o perfil",
+        variant: "destructive",
+      });
     }
   };
 
@@ -290,8 +365,15 @@ export default function ProfilePage() {
                       id="username"
                       name="username"
                       value={formData.username}
-                      onChange={handleInputChange}
+                      onChange={(e) => {
+                        setFormData({ ...formData, username: e.target.value });
+                        setFieldErrors(prev => ({ ...prev, username: '' }));
+                      }}
+                      className={`${fieldErrors.username ? 'border-red-300' : 'border-purple-300'}`}
                     />
+                    {fieldErrors.username && (
+                      <p className="mt-1 text-sm text-red-600">{fieldErrors.username}</p>
+                    )}
                   </div>
                   <div>
                     <Label htmlFor="email">Email</Label>
@@ -300,8 +382,15 @@ export default function ProfilePage() {
                       name="email"
                       type="email"
                       value={formData.email}
-                      onChange={handleInputChange}
+                      onChange={(e) => {
+                        setFormData({ ...formData, email: e.target.value });
+                        setFieldErrors(prev => ({ ...prev, email: '' }));
+                      }}
+                      className={`${fieldErrors.email ? 'border-red-300' : 'border-purple-300'}`}
                     />
+                    {fieldErrors.email && (
+                      <p className="mt-1 text-sm text-red-600">{fieldErrors.email}</p>
+                    )}
                   </div>
                   <div>
                     <Label htmlFor="full_name">Nome completo</Label>
@@ -309,8 +398,15 @@ export default function ProfilePage() {
                       id="full_name"
                       name="full_name"
                       value={formData.full_name}
-                      onChange={handleInputChange}
+                      onChange={(e) => {
+                        setFormData({ ...formData, full_name: e.target.value });
+                        setFieldErrors(prev => ({ ...prev, full_name: '' }));
+                      }}
+                      className={`${fieldErrors.full_name ? 'border-red-300' : 'border-purple-300'}`}
                     />
+                    {fieldErrors.full_name && (
+                      <p className="mt-1 text-sm text-red-600">{fieldErrors.full_name}</p>
+                    )}
                   </div>
                   <div>
                     <Label htmlFor="current_password">Senha atual</Label>
@@ -319,8 +415,15 @@ export default function ProfilePage() {
                       name="current_password"
                       type="password"
                       value={formData.current_password}
-                      onChange={handleInputChange}
+                      onChange={(e) => {
+                        setFormData({ ...formData, current_password: e.target.value });
+                        setFieldErrors(prev => ({ ...prev, current_password: '' }));
+                      }}
+                      className={`${fieldErrors.current_password ? 'border-red-300' : 'border-purple-300'}`}
                     />
+                    {fieldErrors.current_password && (
+                      <p className="mt-1 text-sm text-red-600">{fieldErrors.current_password}</p>
+                    )}
                   </div>
                   <div>
                     <Label htmlFor="new_password">Nova senha</Label>
@@ -329,8 +432,15 @@ export default function ProfilePage() {
                       name="new_password"
                       type="password"
                       value={formData.new_password}
-                      onChange={handleInputChange}
+                      onChange={(e) => {
+                        setFormData({ ...formData, new_password: e.target.value });
+                        setFieldErrors(prev => ({ ...prev, new_password: '' }));
+                      }}
+                      className={`${fieldErrors.new_password ? 'border-red-300' : 'border-purple-300'}`}
                     />
+                    {fieldErrors.new_password && (
+                      <p className="mt-1 text-sm text-red-600">{fieldErrors.new_password}</p>
+                    )}
                   </div>
                   <div>
                     <Label htmlFor="confirm_password">Confirmar nova senha</Label>
@@ -339,15 +449,29 @@ export default function ProfilePage() {
                       name="confirm_password"
                       type="password"
                       value={formData.confirm_password}
-                      onChange={handleInputChange}
+                      onChange={(e) => {
+                        setFormData({ ...formData, confirm_password: e.target.value });
+                        setFieldErrors(prev => ({ ...prev, confirm_password: '' }));
+                      }}
+                      className={`${fieldErrors.confirm_password ? 'border-red-300' : 'border-purple-300'}`}
                     />
+                    {fieldErrors.confirm_password && (
+                      <p className="mt-1 text-sm text-red-600">{fieldErrors.confirm_password}</p>
+                    )}
                   </div>
                   <div className="flex gap-2">
                     <Button onClick={handleSave} className="bg-purple-900 hover:bg-purple-800">
                       <Save className="w-4 h-4 mr-2" />
                       Salvar
                     </Button>
-                    <Button variant="ghost" onClick={() => setEditing(false)} className="text-purple-900 hover:text-purple-800 hover:bg-purple-50">
+                    <Button 
+                      variant="ghost" 
+                      onClick={() => {
+                        setEditing(false);
+                        setFieldErrors({});
+                      }} 
+                      className="text-purple-900 hover:text-purple-800 hover:bg-purple-50"
+                    >
                       <X className="w-4 h-4 mr-2" />
                       Cancelar
                     </Button>

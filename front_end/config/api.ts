@@ -8,91 +8,49 @@ interface ApiError extends Error {
 // Função para fazer requisições à API
 async function apiRequest<T>(
   endpoint: string,
-  options: RequestInit = {},
-  retryCount = 0
+  method: string = 'GET',
+  data?: any,
+  requiresAuth: boolean = true
 ): Promise<T> {
-  const token = localStorage.getItem('access_token');
-  
-  if (!token) {
-    throw new Error('Token não encontrado');
-  }
-
-  const headers = {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token}`,
-    ...options.headers,
-  };
-
   try {
-    console.log(`Making request to: ${API_BASE_URL}${endpoint}`);
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+    };
+
+    if (requiresAuth) {
+      const token = localStorage.getItem('access_token');
+      if (!token) {
+        throw new Error('Sessão expirada');
+      }
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    console.log('Fazendo requisição para:', `${API_BASE_URL}${endpoint}`);
+    console.log('Método:', method);
+    console.log('Dados:', data);
+    console.log('Headers:', headers);
+
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-      ...options,
+      method,
       headers,
+      body: data ? JSON.stringify(data) : undefined,
     });
 
-    console.log(`Response status: ${response.status}`);
+    console.log('Status da resposta:', response.status);
+    console.log('Headers da resposta:', Object.fromEntries(response.headers.entries()));
 
-    if (response.status === 401) {
-      // Tenta renovar o token
-      try {
-        const refreshToken = localStorage.getItem('refresh_token');
-        if (!refreshToken) {
-          throw new Error('Refresh token não encontrado');
-        }
-
-        const refreshResponse = await fetch(`${API_BASE_URL}/auth/refresh`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ refresh_token: refreshToken }),
-        });
-
-        if (!refreshResponse.ok) {
-          // Se o refresh token é inválido, limpa os tokens e redireciona para login
-          localStorage.removeItem('access_token');
-          localStorage.removeItem('refresh_token');
-          throw new Error('Sessão expirada. Por favor, faça login novamente.');
-        }
-
-        const data = await refreshResponse.json();
-        if (!data.access_token || !data.refresh_token) {
-          throw new Error('Tokens inválidos recebidos do servidor');
-        }
-
-        localStorage.setItem('access_token', data.access_token);
-        localStorage.setItem('refresh_token', data.refresh_token);
-
-        // Repete a requisição original com o novo token
-        return apiRequest(endpoint, options, retryCount + 1);
-      } catch (refreshError) {
-        console.error('Erro ao renovar token:', refreshError);
-        // Se não conseguiu renovar o token, limpa os tokens e redireciona para login
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
-        throw new Error('Sessão expirada. Por favor, faça login novamente.');
-      }
-    }
+    const responseData = await response.json();
+    console.log('Dados da resposta:', responseData);
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      const errorMessage = errorData.detail || 'Erro na requisição';
-      const error = new Error(errorMessage) as ApiError;
-      error.status = response.status;
-      throw error;
+      console.log('Erro na resposta:', responseData);
+      throw new Error(responseData.detail || 'Erro na requisição');
     }
 
-    return response.json();
+    return responseData;
   } catch (error) {
-    if (error instanceof Error) {
-      if (error.message === 'Failed to fetch' && retryCount < 3) {
-        console.log(`Retrying request (attempt ${retryCount + 1})...`);
-        await new Promise(resolve => setTimeout(resolve, Math.pow(2, retryCount) * 1000));
-        return apiRequest(endpoint, options, retryCount + 1);
-      }
-      throw error;
-    }
-    throw new Error('Erro desconhecido');
+    console.log('Erro na requisição:', error);
+    throw error;
   }
 }
 
@@ -117,7 +75,7 @@ export const api = {
     return data;
   },
 
-  register: async (userData: { username: string; email: string; password: string }) => {
+  register: async (userData: { username: string; email: string; password: string; full_name: string }) => {
     const response = await fetch(`${API_BASE_URL}/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -139,26 +97,15 @@ export const api = {
 
   // User
   getCurrentUser: () => apiRequest<UserProfile>('/auth/me'),
-  updateUser: (data: any) => apiRequest('/auth/me', {
-    method: 'PATCH',
-    body: JSON.stringify(data),
-  }),
+  updateUser: (data: any) => apiRequest('/auth/me', 'PATCH', data),
   getUserByUsername: (username: string) => apiRequest(`/users/${username}`),
 
   // Bookshelf
   getBookshelf: () => apiRequest('/bookshelf'),
   getBookDetails: (bookId: number) => apiRequest(`/bookshelf/books/${bookId}`),
-  addToBookshelf: (bookData: any) => apiRequest('/bookshelf', {
-    method: 'POST',
-    body: JSON.stringify(bookData),
-  }),
-  updateBookshelfEntry: (entryId: number, data: any) => apiRequest(`/bookshelf/${entryId}`, {
-    method: 'PATCH',
-    body: JSON.stringify(data),
-  }),
-  removeFromBookshelf: (entryId: number) => apiRequest(`/bookshelf/${entryId}`, {
-    method: 'DELETE',
-  }),
+  addToBookshelf: (bookData: any) => apiRequest('/bookshelf', 'POST', bookData),
+  updateBookshelfEntry: (entryId: number, data: any) => apiRequest(`/bookshelf/${entryId}`, 'PATCH', data),
+  removeFromBookshelf: (entryId: number) => apiRequest(`/bookshelf/${entryId}`, 'DELETE'),
 
   // Search
   searchUsers: (query: string) => apiRequest(`/users/search?query=${encodeURIComponent(query)}`),

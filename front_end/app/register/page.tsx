@@ -51,8 +51,26 @@ export default function RegisterPage() {
     }
 
     // Validar senha
-    if (formData.password.length < 6) {
-      setError('A senha deve ter pelo menos 6 caracteres');
+    if (formData.password.length < 8) {
+      setError('A senha deve ter pelo menos 8 caracteres');
+      setLoading(false);
+      return;
+    }
+
+    if (!/[A-Z]/.test(formData.password)) {
+      setError('A senha deve conter pelo menos uma letra maiúscula');
+      setLoading(false);
+      return;
+    }
+
+    if (!/[a-z]/.test(formData.password)) {
+      setError('A senha deve conter pelo menos uma letra minúscula');
+      setLoading(false);
+      return;
+    }
+
+    if (!/[0-9]/.test(formData.password)) {
+      setError('A senha deve conter pelo menos um número');
       setLoading(false);
       return;
     }
@@ -84,10 +102,13 @@ export default function RegisterPage() {
     } catch (error) {
       console.error('Erro no registro:', error);
       if (error instanceof Error) {
-        if (error.message.includes('username')) {
+        const errorMessage = error.message.toLowerCase();
+        if (errorMessage.includes('nome de usuário')) {
           setError('Este nome de usuário já está em uso');
-        } else if (error.message.includes('email')) {
+        } else if (errorMessage.includes('email')) {
           setError('Este email já está em uso');
+        } else if (errorMessage.includes('obrigatório')) {
+          setError('Todos os campos são obrigatórios');
         } else {
           setError(error.message || 'Erro ao criar conta');
         }

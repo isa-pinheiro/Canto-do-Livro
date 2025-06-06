@@ -22,7 +22,7 @@ class User(Base):
     password_hash = Column(String)
     profile_picture = Column(String, nullable=True)  # URL da imagem
     disabled = Column(Boolean, default=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     # Relationships

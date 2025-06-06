@@ -7,6 +7,7 @@ from ..models.bookshelf import UserBookshelf
 from ..schemas.user import UserResponse, UserUpdate, UserSearchResponse
 from ..auth import get_current_user
 from sqlalchemy import func, case, or_
+from datetime import datetime
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -231,13 +232,20 @@ async def search_users(
                 'favorite': bookshelf_stats.favorite or 0
             }
 
+            # Check if current user is following this user
+            is_following = user in db.query(User).filter(User.id == current_user["id"]).first().following
+
+            # Ensure created_at is not None
+            created_at = user.created_at or datetime.now()
+
             results.append({
                 "id": user.id,
                 "username": user.username,
                 "full_name": user.full_name,
                 "profile_picture": user.profile_picture,
-                "created_at": user.created_at,
-                "bookshelf_stats": stats_dict
+                "created_at": created_at,
+                "bookshelf_stats": stats_dict,
+                "is_following": is_following
             })
 
         return results

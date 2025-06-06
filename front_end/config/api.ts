@@ -49,8 +49,10 @@ async function apiRequest<T>(
         });
 
         if (!refreshResponse.ok) {
-          const errorData = await refreshResponse.json().catch(() => ({}));
-          throw new Error(errorData.detail || 'Falha ao renovar token');
+          // Se o refresh token é inválido, limpa os tokens e redireciona para login
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('refresh_token');
+          throw new Error('Sessão expirada. Por favor, faça login novamente.');
         }
 
         const data = await refreshResponse.json();

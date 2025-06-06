@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { User, Search, ArrowLeft } from 'lucide-react';
 import Image from 'next/image';
+import { api } from '@/config/api';
 
 interface UserSearchResult {
   id: number;
@@ -30,38 +31,41 @@ export default function SearchPage() {
   const [query, setQuery] = useState(searchParams.get('q') || '');
   const [users, setUsers] = useState<UserSearchResult[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
+  // Debounced search function
+  const debouncedSearch = useCallback(
+    (searchQuery: string) => {
+      const timeoutId = setTimeout(() => {
+        if (searchQuery.trim()) {
+          searchUsers(searchQuery);
+        } else {
+          setUsers([]);
+        }
+      }, 300); // 300ms delay
+
+      return () => clearTimeout(timeoutId);
+    },
+    []
+  );
+
   useEffect(() => {
-    if (query) {
-      searchUsers();
-    }
-  }, [query]);
+    debouncedSearch(query);
+  }, [query, debouncedSearch]);
 
-  const searchUsers = async () => {
+  const searchUsers = async (searchQuery: string) => {
     setLoading(true);
+    setError(null);
     try {
-      const response = await fetch(`http://localhost:8000/api/users/search?query=${encodeURIComponent(query)}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-        }
-      });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          router.push('/login');
-          return;
-        }
-        throw new Error('Falha ao buscar usuários');
-      }
-
-      const data = await response.json();
+      const data = await api.searchUsers(searchQuery);
       setUsers(data);
     } catch (error) {
       console.error('Erro ao buscar usuários:', error);
+      setError(error instanceof Error ? error.message : 'Falha ao buscar usuários');
       toast({
         title: "Erro",
-        description: "Falha ao buscar usuários",
+        description: error instanceof Error ? error.message : "Falha ao buscar usuários",
         variant: "destructive",
       });
     } finally {
@@ -71,16 +75,10 @@ export default function SearchPage() {
 
   const handleFollow = async (userId: number, isFollowing: boolean) => {
     try {
-      const method = isFollowing ? 'DELETE' : 'POST';
-      const response = await fetch(`http://localhost:8000/api/users/${userId}/follow`, {
-        method,
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Falha ao atualizar status de seguimento');
+      if (isFollowing) {
+        await api.unfollowUser(userId);
+      } else {
+        await api.followUser(userId);
       }
 
       // Atualiza a lista de usuários
@@ -102,7 +100,7 @@ export default function SearchPage() {
       console.error('Erro ao atualizar status de seguimento:', error);
       toast({
         title: "Erro",
-        description: "Falha ao atualizar status de seguimento",
+        description: error instanceof Error ? error.message : "Falha ao atualizar status de seguimento",
         variant: "destructive",
       });
     }
@@ -135,6 +133,12 @@ export default function SearchPage() {
               />
             </div>
           </div>
+
+          {error && (
+            <div className="text-center py-8">
+              <p className="text-red-600">{error}</p>
+            </div>
+          )}
 
           {loading ? (
             <div className="text-center py-8">
@@ -195,11 +199,11 @@ export default function SearchPage() {
                 </div>
               ))}
             </div>
-          ) : (
+          ) : query ? (
             <div className="text-center py-8">
               <p className="text-gray-500">Nenhum usuário encontrado</p>
             </div>
-          )}
+          ) : null}
         </div>
       </div>
     </div>

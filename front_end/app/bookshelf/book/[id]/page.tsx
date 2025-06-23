@@ -28,6 +28,7 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import { api } from '@/config/api';
+import { StarRating } from '@/components/ui/StarRating';
 
 interface Book {
   id: number;
@@ -46,6 +47,7 @@ interface BookshelfEntry {
   status: 'to_read' | 'reading' | 'read' | 'favorite';
   pages_read: number;
   total_pages: number;
+  rating: number | null;
 }
 
 export default function BookDetailsPage({ params }: { params: Promise<{ id: string }> }) {
@@ -59,7 +61,8 @@ export default function BookDetailsPage({ params }: { params: Promise<{ id: stri
   const [formData, setFormData] = useState({
     status: '',
     pages_read: 0,
-    total_pages: 0
+    total_pages: 0,
+    rating: null as number | null,
   });
 
   useEffect(() => {
@@ -72,7 +75,8 @@ export default function BookDetailsPage({ params }: { params: Promise<{ id: stri
       setFormData({
         status: bookshelfEntry.status,
         pages_read: bookshelfEntry.pages_read || 0,
-        total_pages: bookshelfEntry.total_pages || book?.num_pages || 0
+        total_pages: bookshelfEntry.total_pages || book?.num_pages || 0,
+        rating: bookshelfEntry.rating,
       });
     }
   }, [bookshelfEntry, book]);
@@ -246,6 +250,31 @@ export default function BookDetailsPage({ params }: { params: Promise<{ id: stri
     }
   };
 
+  const handleRatingChange = async (newRating: number) => {
+    if (!bookshelfEntry) return;
+
+    try {
+      const updatedEntry = await api.updateBookshelfEntry(bookshelfEntry.id, {
+        rating: newRating,
+      });
+      setBookshelfEntry(updatedEntry);
+      toast({
+        title: 'Avaliação atualizada',
+        description: `Sua avaliação de ${newRating} estrelas foi salva.`,
+      });
+    } catch (error) {
+      console.error('Erro ao atualizar avaliação:', error);
+      toast({
+        title: 'Erro',
+        description:
+          error instanceof Error
+            ? error.message
+            : 'Falha ao atualizar a avaliação',
+        variant: 'destructive',
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-purple-50">
@@ -365,15 +394,22 @@ export default function BookDetailsPage({ params }: { params: Promise<{ id: stri
                 </div>
 
                 {/* Descrição */}
-                {book?.description && (
-                  <div>
-                    <h2 className="text-xl font-heading text-purple-900 mb-2">Descrição</h2>
-                    <p className="text-purple-700 font-sans">{book.description}</p>
+                {book.description && (
+                  <p className="text-sm text-purple-700 mb-4">{book.description}</p>
+                )}
+
+                {bookshelfEntry?.status === 'read' && (
+                  <div className="my-6">
+                    <h3 className="text-lg font-semibold text-purple-900 mb-2">Sua Avaliação</h3>
+                    <StarRating
+                      rating={formData.rating || 0}
+                      onRatingChange={handleRatingChange}
+                    />
                   </div>
                 )}
 
                 {/* Detalhes */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-6 border-t border-purple-100">
                   {book?.publication_year && (
                     <div className="flex items-center gap-2">
                       <Calendar className="w-5 h-5 text-purple-500" />
@@ -412,17 +448,26 @@ export default function BookDetailsPage({ params }: { params: Promise<{ id: stri
             >
               Voltar
             </Button>
-            <Button
-              variant="destructive"
-              onClick={() => {
-                console.log('Botão de remover clicado');
-                handleRemoveBook();
-              }}
-              className="bg-red-600 hover:bg-red-700"
-            >
-              <Trash2 className="w-4 h-4 mr-2" />
-              Remover da Estante
-            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive">
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Remover da Estante
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Você tem certeza?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Essa ação não pode ser desfeita. Isso removerá permanentemente o livro da sua estante.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleRemoveBook}>Remover</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         </div>
       </div>

@@ -31,6 +31,7 @@ class UserBookshelf(Base):
     status = Column(String, default="to_read")  # to_read, reading, read, favorite
     pages_read = Column(Integer, default=0)
     total_pages = Column(Integer)
+    rating = Column(Float, nullable=True) # 1 to 5 stars, with 0.5 increments
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

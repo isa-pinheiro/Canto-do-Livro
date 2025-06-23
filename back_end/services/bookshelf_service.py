@@ -78,6 +78,17 @@ class BookshelfService:
 
         # Update fields
         update_data = entry_update.dict(exclude_unset=True)
+
+        # A user can only rate a book if it is marked as 'read'
+        if 'rating' in update_data and update_data['rating'] is not None:
+            current_status = bookshelf_entry.status
+            new_status = update_data.get('status', current_status)
+            if new_status != 'read':
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="You can only rate books that are marked as 'read'"
+                )
+
         for field, value in update_data.items():
             setattr(bookshelf_entry, field, value)
 

@@ -107,6 +107,8 @@ export const api = {
   addToBookshelf: (bookData: any) => apiRequest('/bookshelf', 'POST', bookData),
   updateBookshelfEntry: (entryId: number, data: any) => apiRequest(`/bookshelf/${entryId}`, 'PATCH', data),
   removeFromBookshelf: (entryId: number) => apiRequest(`/bookshelf/${entryId}`, 'DELETE'),
+  getUserAverageRating: () => apiRequest('/bookshelf/average-rating'),
+  getUserAverageRatingById: (userId: number) => apiRequest(`/bookshelf/users/${userId}/average-rating`),
 
   // Search
   searchUsers: (query: string) => apiRequest(`/users/search?query=${encodeURIComponent(query)}`),

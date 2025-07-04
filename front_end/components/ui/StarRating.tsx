@@ -69,4 +69,50 @@ export function StarRating({ rating, onRatingChange, readOnly = false }: StarRat
       })}
     </div>
   );
+}
+
+interface StarRatingDisplayProps {
+  rating: number;
+  size?: 'sm' | 'md' | 'lg';
+  showValue?: boolean;
+}
+
+export function StarRatingDisplay({ rating, size = 'md', showValue = false }: StarRatingDisplayProps) {
+  const sizeClasses = {
+    sm: 'w-4 h-4',
+    md: 'w-5 h-5',
+    lg: 'w-6 h-6'
+  };
+
+  const starSize = sizeClasses[size];
+
+  return (
+    <div className="flex items-center gap-1">
+      {[1, 2, 3, 4, 5].map((star) => {
+        const fillPercentage =
+          rating >= star
+            ? '100%'
+            : rating >= star - 0.5
+            ? '50%'
+            : '0%';
+
+        return (
+          <div key={star} className="relative">
+            <Star className={`${starSize} text-gray-300`} />
+            <div
+              className="absolute top-0 left-0 h-full overflow-hidden"
+              style={{ width: fillPercentage }}
+            >
+              <Star className={`${starSize} text-yellow-400`} fill="currentColor" />
+            </div>
+          </div>
+        );
+      })}
+      {showValue && (
+        <span className="ml-2 text-sm font-medium text-gray-700">
+          {rating.toFixed(1)}
+        </span>
+      )}
+    </div>
+  );
 } 

@@ -22,6 +22,7 @@ interface Book {
   description: string | null;
   publication_year: number;
   num_pages: number;
+  average_rating: number;
 }
 
 export function AddBookDialog({ onBookAdded }: AddBookDialogProps) {
@@ -226,6 +227,10 @@ export function AddBookDialog({ onBookAdded }: AddBookDialogProps) {
                             {book.num_pages} páginas
                           </span>
                         )}
+                        <span className="flex items-center gap-1">
+                          <Star className="w-4 h-4" />
+                          {book.average_rating.toFixed(1)}
+                        </span>
                       </div>
                     </div>
                   </div>

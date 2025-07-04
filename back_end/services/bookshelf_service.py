@@ -1,7 +1,7 @@
 from typing import List, Optional
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
-from sqlalchemy import or_
+from sqlalchemy import or_, func
 
 from back_end.models.bookshelf import Book, UserBookshelf
 from back_end.schemas.book import BookCreate, Book as BookSchema
@@ -56,6 +56,36 @@ class BookshelfService:
         
         return bookshelf
 
+    def calculate_book_average_rating(self, book_id: int) -> float:
+        """
+        Calcula a média de rating de um livro específico baseado nas avaliações de todos os usuários.
+        Retorna 0.0 se nenhum usuário avaliou o livro.
+        """
+        # Busca todas as avaliações válidas para o livro (rating > 0)
+        ratings = self.db.query(UserBookshelf.rating).filter(
+            UserBookshelf.book_id == book_id,
+            UserBookshelf.rating.isnot(None),
+            UserBookshelf.rating > 0
+        ).all()
+        
+        if not ratings:
+            return 0.0
+        
+        # Calcula a média
+        total_rating = sum(rating[0] for rating in ratings)
+        average_rating = total_rating / len(ratings)
+        
+        return round(average_rating, 2)
+
+    def update_book_average_rating(self, book_id: int) -> None:
+        """
+        Atualiza a média de rating de um livro no banco de dados.
+        """
+        book = self.db.query(Book).filter(Book.id == book_id).first()
+        if book:
+            book.average_rating = self.calculate_book_average_rating(book_id)
+            self.db.commit()
+
     def update_bookshelf_entry(self, entry_id: int, user_id: int, entry_update: BookshelfEntryUpdate) -> BookshelfEntry:
         bookshelf_entry = self.db.query(UserBookshelf).filter(
             UserBookshelf.id == entry_id,
@@ -105,6 +135,11 @@ class BookshelfService:
 
         self.db.commit()
         self.db.refresh(bookshelf_entry)
+        
+        # Se o rating foi atualizado, recalcula a média do livro
+        if 'rating' in update_data:
+            self.update_book_average_rating(bookshelf_entry.book_id)
+        
         return bookshelf_entry
 
     def remove_from_bookshelf(self, bookshelf_id: int, user_id: int) -> dict:
@@ -155,4 +190,80 @@ class BookshelfService:
         return {
             "book": book,
             "bookshelf_entry": bookshelf_entry
+        }
+
+    def get_user_average_rating(self, user_id: int) -> dict:
+        """
+        Calcula a média de estrelas que um usuário deu aos livros que já leu.
+        Retorna apenas livros marcados como 'read' e que possuem rating.
+        """
+        # Busca todos os livros do usuário que estão marcados como lidos e possuem rating
+        read_books_with_rating = self.db.query(UserBookshelf).filter(
+            UserBookshelf.user_id == user_id,
+            UserBookshelf.status == "read",
+            UserBookshelf.rating.isnot(None),
+            UserBookshelf.rating > 0
+        ).all()
+
+        if not read_books_with_rating:
+            return {
+                "average_rating": 0.0,
+                "total_rated_books": 0,
+                "total_read_books": 0,
+                "message": "Nenhum livro avaliado encontrado"
+            }
+
+        # Calcula a média das avaliações
+        total_rating = sum(book.rating for book in read_books_with_rating)
+        average_rating = total_rating / len(read_books_with_rating)
+
+        # Busca o total de livros lidos (com ou sem avaliação)
+        total_read_books = self.db.query(UserBookshelf).filter(
+            UserBookshelf.user_id == user_id,
+            UserBookshelf.status == "read"
+        ).count()
+
+        return {
+            "average_rating": round(average_rating, 2),
+            "total_rated_books": len(read_books_with_rating),
+            "total_read_books": total_read_books,
+            "message": f"Média calculada com base em {len(read_books_with_rating)} livros avaliados"
+        }
+
+    def get_user_average_rating_by_id(self, user_id: int) -> dict:
+        """
+        Calcula a média de estrelas que um usuário específico deu aos livros que já leu.
+        Retorna apenas livros marcados como 'read' e que possuem rating.
+        """
+        # Busca todos os livros do usuário que estão marcados como lidos e possuem rating
+        read_books_with_rating = self.db.query(UserBookshelf).filter(
+            UserBookshelf.user_id == user_id,
+            UserBookshelf.status == "read",
+            UserBookshelf.rating.isnot(None),
+            UserBookshelf.rating > 0
+        ).all()
+
+        if not read_books_with_rating:
+            return {
+                "average_rating": 0.0,
+                "total_rated_books": 0,
+                "total_read_books": 0,
+                "message": "Nenhum livro avaliado encontrado"
+            }
+
+        # Calcula a média das avaliações
+        total_rating = sum(book.rating for book in read_books_with_rating)
+        average_rating = total_rating / len(read_books_with_rating)
+
+        # Busca o total de livros lidos (com ou sem avaliação)
+        total_read_books = self.db.query(UserBookshelf).filter(
+            UserBookshelf.user_id == user_id,
+            UserBookshelf.status == "read"
+        ).count()
+
+        return {
+            "average_rating": round(average_rating, 2),
+            "total_rated_books": len(read_books_with_rating),
+            "total_read_books": total_read_books,
+            "message": f"Média calculada com base em {len(read_books_with_rating)} livros avaliados"
         } 

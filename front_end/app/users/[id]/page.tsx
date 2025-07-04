@@ -6,6 +6,8 @@ import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { User, Users, ArrowLeft } from 'lucide-react';
 import Image from 'next/image';
+import { StarRatingDisplay } from '@/components/ui/StarRating';
+import { api } from '@/config/api';
 
 interface UserProfile {
   id: number;
@@ -29,6 +31,13 @@ interface Follower {
   profile_picture: string | null;
 }
 
+interface UserAverageRating {
+  average_rating: number;
+  total_rated_books: number;
+  total_read_books: number;
+  message: string;
+}
+
 export default function UserProfilePage({ params }: { params: { id: string } }) {
   const router = useRouter();
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -38,6 +47,7 @@ export default function UserProfilePage({ params }: { params: { id: string } }) 
   const [following, setFollowing] = useState<Follower[]>([]);
   const [showFollowers, setShowFollowers] = useState(false);
   const [showFollowing, setShowFollowing] = useState(false);
+  const [averageRating, setAverageRating] = useState<UserAverageRating | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -45,6 +55,7 @@ export default function UserProfilePage({ params }: { params: { id: string } }) 
     fetchFollowStatus();
     fetchFollowers();
     fetchFollowing();
+    fetchAverageRating();
   }, [params.id]);
 
   const fetchUserProfile = async () => {
@@ -135,6 +146,16 @@ export default function UserProfilePage({ params }: { params: { id: string } }) 
       setFollowing(data);
     } catch (error) {
       console.error('Erro ao buscar seguindo:', error);
+    }
+  };
+
+  const fetchAverageRating = async () => {
+    try {
+      const data = await api.getUserAverageRatingById(Number(params.id)) as UserAverageRating;
+      setAverageRating(data);
+    } catch (error) {
+      console.error('Erro ao carregar rating médio:', error);
+      // Não mostrar toast de erro para não poluir a interface
     }
   };
 
@@ -290,6 +311,31 @@ export default function UserProfilePage({ params }: { params: { id: string } }) 
               </div>
             </div>
           </div>
+
+          {averageRating && (
+            <div className="mt-8 pt-8 border-t border-gray-200">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Avaliação Média</h3>
+              <div className="bg-purple-50 p-6 rounded-lg">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <StarRatingDisplay rating={averageRating.average_rating} size="lg" showValue={true} />
+                    <span className="text-lg font-medium text-purple-900">
+                      {averageRating.average_rating.toFixed(1)} / 5.0
+                    </span>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-purple-700">
+                  <div>
+                    <p><strong>Livros avaliados:</strong> {averageRating.total_rated_books}</p>
+                    <p><strong>Total de livros lidos:</strong> {averageRating.total_read_books}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-purple-600">{averageRating.message}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

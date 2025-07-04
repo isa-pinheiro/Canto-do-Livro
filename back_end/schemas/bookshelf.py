@@ -38,4 +38,10 @@ class BookshelfEntry(BookshelfEntryBase):
     book: Book
 
     class Config:
-        from_attributes = True 
+        from_attributes = True
+
+class UserAverageRating(BaseModel):
+    average_rating: float = Field(ge=0, le=5)
+    total_rated_books: int = Field(ge=0)
+    total_read_books: int = Field(ge=0)
+    message: str 

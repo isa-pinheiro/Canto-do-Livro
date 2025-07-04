@@ -4,7 +4,7 @@ from typing import List, Optional
 
 from back_end.models.base import get_db
 from back_end.schemas.book import Book as BookSchema
-from back_end.schemas.bookshelf import BookshelfEntry, BookshelfEntryUpdate
+from back_end.schemas.bookshelf import BookshelfEntry, BookshelfEntryUpdate, UserAverageRating
 from back_end.auth.auth import get_current_user
 from back_end.services.bookshelf_service import BookshelfService
 
@@ -62,4 +62,28 @@ async def get_book_details(
     db: Session = Depends(get_db)
 ):
     bookshelf_service = BookshelfService(db)
-    return bookshelf_service.get_book_details(book_id, current_user["id"]) 
+    return bookshelf_service.get_book_details(book_id, current_user["id"])
+
+@router.get("/average-rating", response_model=UserAverageRating)
+async def get_user_average_rating(
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Retorna a média de estrelas que o usuário deu aos livros que já leu.
+    Considera apenas livros marcados como 'read' e que possuem avaliação.
+    """
+    bookshelf_service = BookshelfService(db)
+    return bookshelf_service.get_user_average_rating(current_user["id"])
+
+@router.get("/users/{user_id}/average-rating", response_model=UserAverageRating)
+async def get_user_average_rating_by_id(
+    user_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Retorna a média de estrelas que um usuário específico deu aos livros que já leu.
+    Considera apenas livros marcados como 'read' e que possuem avaliação.
+    """
+    bookshelf_service = BookshelfService(db)
+    return bookshelf_service.get_user_average_rating_by_id(user_id) 

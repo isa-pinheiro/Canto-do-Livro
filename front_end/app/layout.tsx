@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Inter, Playfair_Display, Poppins } from 'next/font/google'
 import './globals.css'
 import { Toaster } from '@/components/ui/toaster'
-import { ClientLayout } from '@/components/ClientLayout'
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
 const playfair = Playfair_Display({ subsets: ['latin'], variable: '--font-playfair' })
@@ -25,9 +24,7 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <body className={`${inter.variable} ${playfair.variable} ${poppins.variable} font-sans`}>
-        <ClientLayout>
-          {children}
-        </ClientLayout>
+        {children}
         <Toaster />
       </body>
     </html>

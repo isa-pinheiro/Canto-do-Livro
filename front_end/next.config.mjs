@@ -11,6 +11,9 @@ const nextConfig = {
     unoptimized: true,
     domains: ['localhost'],
   },
+  experimental: {
+    optimizeCss: true,
+  },
 }
 
 export default nextConfig

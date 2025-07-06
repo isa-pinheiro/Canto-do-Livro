@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from back_end.models.base import Base, engine
 from back_end.routes import auth, bookshelf, users
+from back_end.routes import chatbot
 import os
 from datetime import datetime
 
@@ -35,6 +36,7 @@ app.mount("/api/static", StaticFiles(directory="uploads"), name="static")
 app.include_router(auth.router, prefix="/api")
 app.include_router(bookshelf.router, prefix="/api")
 app.include_router(users.router, prefix="/api")
+app.include_router(chatbot.router, prefix="/api")
 
 @app.get("/")
 async def root():

@@ -158,9 +158,9 @@ export default function SearchPage() {
                   >
                     <div className="flex items-center gap-4">
                       <div className="relative w-16 h-16 rounded-full overflow-hidden bg-purple-200">
-                        {user.profile_picture ? (
-                          <Image
-                            src={user.profile_picture}
+                                            {user.profile_picture ? (
+                      <Image
+                        src={`http://localhost:8000${user.profile_picture}`}
                             alt={user.username}
                             fill
                             className="object-cover"

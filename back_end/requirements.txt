@@ -19,3 +19,6 @@ psycopg2
 # sqlalchemy
 # email-validator
 # python-dotenv
+openai
+langchain
+langchain-google-genai

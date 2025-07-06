@@ -5,7 +5,7 @@ import { Navbar } from "@/components/Navbar";
 import { ReactNode } from 'react';
 
 // Lista de rotas onde a navbar deve aparecer
-const navbarRoutes = ['/bookshelf', '/search', '/profile', '/dashboard'];
+const navbarRoutes = ['/bookshelf', '/search', '/profile', '/dashboard', '/chatbot'];
 
 interface PageLayoutProps {
   children: ReactNode;

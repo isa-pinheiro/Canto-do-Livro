@@ -1,0 +1,29 @@
+# Ignorar variáveis de ambiente
+.env*
+
+# Ignorar arquivos de cache do Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Ignorar arquivos de log
+*.log
+
+# Ignorar arquivos temporários
+*.tmp
+*.swp
+*.bak
+
+# Ignorar uploads (se não quiser versionar arquivos enviados)
+uploads/
+
+# Ignorar banco de dados SQLite (se usar)
+*.sqlite3
+*.db
+
+# Ignorar arquivos de migração gerados automaticamente (opcional)
+migrations/__pycache__/
+
+# Ignorar arquivos de configuração locais
+*.local 

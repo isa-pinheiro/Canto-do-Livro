@@ -29,6 +29,17 @@ export function Navbar() {
               Minha Estante
             </Link>
             <Link
+              href="/chatbot"
+              className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
+                pathname === '/chatbot'
+                  ? 'text-purple-900 bg-purple-50'
+                  : 'text-purple-700 hover:text-purple-900 hover:bg-purple-50'
+              }`}
+              aria-current={pathname === '/chatbot' ? 'page' : undefined}
+            >
+              🤖 Bot de Recomendação
+            </Link>
+            <Link
               href="/search"
               className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
                 pathname === '/search'

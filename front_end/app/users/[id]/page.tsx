@@ -234,9 +234,9 @@ export default function UserProfilePage({ params }: { params: { id: string } }) 
           <div className="flex flex-col md:flex-row gap-8">
             <div className="flex-shrink-0">
               <div className="relative w-32 h-32 rounded-full overflow-hidden bg-purple-200">
-                {profile.profile_picture ? (
-                  <Image
-                    src={profile.profile_picture}
+                                  {profile.profile_picture ? (
+                    <Image
+                      src={`http://localhost:8000${profile.profile_picture}`}
                     alt={profile.username}
                     fill
                     className="object-cover"

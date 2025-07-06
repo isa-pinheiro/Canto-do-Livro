@@ -181,4 +181,9 @@ export const api = {
 
     return response.json();
   },
+
+  // Chatbot
+  chatbot: async (message: string) => {
+    return apiRequest<{ response: string }>('/chatbot', 'POST', { message }, false);
+  },
 }; 

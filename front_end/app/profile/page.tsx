@@ -274,9 +274,9 @@ export default function ProfilePage() {
     try {
       setUploading(true);
       const formData = new FormData();
-      formData.append('profile_picture', file);
+      formData.append('file', file);
 
-      const response = await fetch('http://localhost:8000/api/users/me/profile-picture', {
+      const response = await fetch('http://localhost:8000/api/auth/me/profile-picture', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
@@ -345,7 +345,7 @@ export default function ProfilePage() {
                 <div className="relative w-32 h-32 rounded-full overflow-hidden bg-purple-200">
                   {userData?.profile_picture ? (
                     <Image
-                      src={userData.profile_picture}
+                      src={`http://localhost:8000${userData.profile_picture}`}
                       alt="Foto de perfil"
                       fill
                       className="object-cover"

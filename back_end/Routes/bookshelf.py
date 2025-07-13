@@ -38,6 +38,15 @@ async def update_bookshelf_entry(
     bookshelf_service = BookshelfService(db)
     return bookshelf_service.update_bookshelf_entry(entry_id, current_user["id"], entry_update)
 
+@router.patch("/{entry_id}/toggle-favorite", response_model=BookshelfEntry)
+async def toggle_favorite(
+    entry_id: int,
+    current_user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    bookshelf_service = BookshelfService(db)
+    return bookshelf_service.toggle_favorite(entry_id, current_user["id"])
+
 @router.delete("/{bookshelf_id}")
 async def remove_from_bookshelf(
     bookshelf_id: int,

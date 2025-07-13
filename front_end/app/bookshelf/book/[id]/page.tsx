@@ -29,6 +29,7 @@ import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import { api } from '@/config/api';
 import { StarRating } from '@/components/ui/StarRating';
+import { FavoriteButton } from '@/components/ui/FavoriteButton';
 
 interface Book {
   id: number;
@@ -48,6 +49,7 @@ interface BookshelfEntry {
   pages_read: number;
   total_pages: number;
   rating: number | null;
+  is_favorite: boolean;
 }
 
 export default function BookDetailsPage({ params }: { params: Promise<{ id: string }> }) {
@@ -402,6 +404,19 @@ export default function BookDetailsPage({ params }: { params: Promise<{ id: stri
                       rating={formData.rating || 0}
                       onRatingChange={handleRatingChange}
                     />
+                    
+                    {/* Botão de Favorito */}
+                    <div className="mt-4 flex items-center gap-3">
+                      <FavoriteButton
+                        isFavorite={bookshelfEntry.is_favorite}
+                        entryId={bookshelfEntry.id}
+                        size="xl"
+                        onToggle={(isFavorite) => {
+                          setBookshelfEntry(prev => prev ? { ...prev, is_favorite: isFavorite } : null);
+                        }}
+                      />
+                      <span className="text-base font-medium text-purple-700">Favorito</span>
+                    </div>
                   </div>
                 )}
 

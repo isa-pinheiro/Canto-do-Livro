@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime, Text
+from sqlalchemy import Column, Integer, String, Float, ForeignKey, DateTime, Text, Boolean
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from back_end.models.base import Base
@@ -32,6 +32,7 @@ class UserBookshelf(Base):
     pages_read = Column(Integer, default=0)
     total_pages = Column(Integer)
     rating = Column(Float, nullable=True) # 1 to 5 stars, with 0.5 increments
+    is_favorite = Column(Boolean, default=False)  # <-- Campo favorito
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

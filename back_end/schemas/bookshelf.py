@@ -8,6 +8,7 @@ class BookshelfEntryBase(BaseModel):
     pages_read: int = Field(ge=0, default=0)
     total_pages: Optional[int] = Field(ge=0, default=None)
     rating: Optional[float] = Field(default=None, ge=1, le=5)
+    is_favorite: bool = Field(default=False)
 
     @validator('rating')
     def validate_rating_increment(cls, v):
@@ -23,6 +24,7 @@ class BookshelfEntryUpdate(BaseModel):
     pages_read: Optional[int] = Field(ge=0, default=None)
     total_pages: Optional[int] = Field(ge=0, default=None)
     rating: Optional[float] = Field(default=None, ge=1, le=5)
+    is_favorite: Optional[bool] = None
 
     @validator('rating')
     def validate_rating_increment(cls, v):

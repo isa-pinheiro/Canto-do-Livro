@@ -28,6 +28,7 @@ interface BookshelfEntry {
   status: 'to_read' | 'reading' | 'read';
   current_page: number;
   total_pages?: number;
+  is_favorite?: boolean;
 }
 
 export default function BookshelfPage() {
@@ -35,6 +36,7 @@ export default function BookshelfPage() {
   const [books, setBooks] = useState<BookshelfEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('to_read');
+  const [showOnlyFavorites, setShowOnlyFavorites] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -50,18 +52,15 @@ export default function BookshelfPage() {
     try {
       console.log('Iniciando busca da estante...');
       const data = await api.getBookshelf();
-
       setBooks(data as BookshelfEntry[]);
     } catch (error) {
       console.error('Erro completo:', error);
       let errorMessage = 'Falha ao carregar estante';
-      
       if (error instanceof TypeError && error.message === 'Failed to fetch') {
         errorMessage = 'Não foi possível conectar ao servidor. Verifique se o servidor está rodando.';
       } else if (error instanceof Error) {
         errorMessage = error.message;
       }
-
       toast({
         title: "Erro",
         description: errorMessage,
@@ -96,7 +95,7 @@ export default function BookshelfPage() {
             <AddBookDialog onBookAdded={handleBookAdded} />
           </div>
 
-          <Tabs defaultValue="to_read" className="w-full">
+          <Tabs defaultValue="to_read" className="w-full" value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="grid w-full grid-cols-3 mb-8">
               <TabsTrigger value="to_read" className="text-purple-700 data-[state=active]:bg-purple-100">
                 Quero Ler
@@ -111,9 +110,20 @@ export default function BookshelfPage() {
 
             {['to_read', 'reading', 'read'].map((status) => (
               <TabsContent key={status} value={status}>
+                {status === 'read' && (
+                  <div className="flex justify-end mb-4">
+                    <button
+                      className={`px-4 py-2 rounded border text-sm font-medium transition-colors ${showOnlyFavorites ? 'bg-red-100 border-red-400 text-red-600' : 'bg-white border-purple-200 text-purple-700 hover:bg-purple-50'}`}
+                      onClick={() => setShowOnlyFavorites((prev) => !prev)}
+                    >
+                      {showOnlyFavorites ? 'Mostrar todos' : 'Mostrar só favoritos'}
+                    </button>
+                  </div>
+                )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                   {books
                     .filter(entry => entry.status === status)
+                    .filter(entry => status !== 'read' || !showOnlyFavorites || entry.is_favorite)
                     .map(entry => (
                       <div
                         key={entry.id}

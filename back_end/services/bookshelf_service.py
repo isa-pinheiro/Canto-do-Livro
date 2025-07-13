@@ -267,3 +267,18 @@ class BookshelfService:
             "total_read_books": total_read_books,
             "message": f"Média calculada com base em {len(read_books_with_rating)} livros avaliados"
         } 
+
+    def toggle_favorite(self, entry_id: int, user_id: int) -> UserBookshelf:
+        bookshelf_entry = self.db.query(UserBookshelf).filter(
+            UserBookshelf.id == entry_id,
+            UserBookshelf.user_id == user_id
+        ).first()
+        if not bookshelf_entry:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Bookshelf entry not found"
+            )
+        bookshelf_entry.is_favorite = not bookshelf_entry.is_favorite
+        self.db.commit()
+        self.db.refresh(bookshelf_entry)
+        return bookshelf_entry 

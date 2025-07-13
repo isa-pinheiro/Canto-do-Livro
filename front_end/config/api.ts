@@ -135,6 +135,7 @@ export const api = {
   getBookDetails: (bookId: number) => apiRequest(`/bookshelf/books/${bookId}`),
   addToBookshelf: (bookData: any) => apiRequest('/bookshelf', 'POST', bookData),
   updateBookshelfEntry: (entryId: number, data: any) => apiRequest(`/bookshelf/${entryId}`, 'PATCH', data),
+  toggleFavorite: (entryId: number) => apiRequest(`/bookshelf/${entryId}/toggle-favorite`, 'PATCH'),
   removeFromBookshelf: (entryId: number) => apiRequest(`/bookshelf/${entryId}`, 'DELETE'),
   getUserAverageRating: () => apiRequest('/bookshelf/average-rating'),
   getUserAverageRatingById: (userId: number) => apiRequest(`/bookshelf/users/${userId}/average-rating`),

@@ -15,6 +15,7 @@ interface UserProfile {
   full_name: string | null;
   profile_picture: string | null;
   created_at: string;
+  is_following?: boolean;
   bookshelf_stats: {
     total: number;
     want_to_read: number;
@@ -43,24 +44,40 @@ export default function UserProfilePage({ params }: { params: { id: string } }) 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [isFollowing, setIsFollowing] = useState(false);
+  
+  // Log quando o estado muda
+  useEffect(() => {
+    console.log('=== ESTADO ISFOLLOWING MUDOU ===');
+    console.log('Novo valor:', isFollowing);
+    console.log('Tipo:', typeof isFollowing);
+  }, [isFollowing]);
+  
   const [followers, setFollowers] = useState<Follower[]>([]);
   const [following, setFollowing] = useState<Follower[]>([]);
   const [showFollowers, setShowFollowers] = useState(false);
   const [showFollowing, setShowFollowing] = useState(false);
   const [averageRating, setAverageRating] = useState<UserAverageRating | null>(null);
   const { toast } = useToast();
+  const [userId, setUserId] = useState<string | undefined>(undefined);
 
   useEffect(() => {
-    fetchUserProfile();
-    fetchFollowStatus();
-    fetchFollowers();
-    fetchFollowing();
-    fetchAverageRating();
-  }, [params.id]);
+    (async () => {
+      const resolvedParams = await params;
+      setUserId(resolvedParams.id);
+    })();
+  }, [params]);
 
-  const fetchUserProfile = async () => {
+  useEffect(() => {
+    if (!userId) return;
+    fetchUserProfile(userId);
+    fetchFollowers(userId);
+    fetchFollowing(userId);
+    fetchAverageRating(userId);
+  }, [userId]);
+
+  const fetchUserProfile = async (id: string) => {
     try {
-      const response = await fetch(`http://localhost:8000/api/users/${params.id}`, {
+      const response = await fetch(`http://localhost:8000/api/users/${id}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('access_token')}`
         }
@@ -75,7 +92,15 @@ export default function UserProfilePage({ params }: { params: { id: string } }) 
       }
 
       const data = await response.json();
+      console.log('=== DADOS DO PERFIL CARREGADOS ===');
+      console.log('Dados completos:', data);
+      console.log('is_following do backend:', data.is_following);
+      console.log('Tipo de is_following:', typeof data.is_following);
       setProfile(data);
+      // Set the follow status from the response
+      const initialFollowStatus = Boolean(data.is_following);
+      console.log('Definindo isFollowing inicial como:', initialFollowStatus);
+      setIsFollowing(initialFollowStatus);
     } catch (error) {
       console.error('Erro ao buscar perfil:', error);
       toast({
@@ -88,33 +113,14 @@ export default function UserProfilePage({ params }: { params: { id: string } }) 
     }
   };
 
-  const fetchFollowStatus = async () => {
+
+
+  const fetchFollowers = async (id: string) => {
     try {
       const token = localStorage.getItem('access_token');
       if (!token) return;
 
-      const response = await fetch(`http://localhost:8000/api/users/${params.id}/followers`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (!response.ok) return;
-
-      const followers = await response.json();
-      const currentUserId = localStorage.getItem('user_id');
-      setIsFollowing(followers.some((f: Follower) => f.id === Number(currentUserId)));
-    } catch (error) {
-      console.error('Erro ao verificar status de seguimento:', error);
-    }
-  };
-
-  const fetchFollowers = async () => {
-    try {
-      const token = localStorage.getItem('access_token');
-      if (!token) return;
-
-      const response = await fetch(`http://localhost:8000/api/users/${params.id}/followers`, {
+      const response = await fetch(`http://localhost:8000/api/users/${id}/followers`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -129,12 +135,12 @@ export default function UserProfilePage({ params }: { params: { id: string } }) 
     }
   };
 
-  const fetchFollowing = async () => {
+  const fetchFollowing = async (id: string) => {
     try {
       const token = localStorage.getItem('access_token');
       if (!token) return;
 
-      const response = await fetch(`http://localhost:8000/api/users/${params.id}/following`, {
+      const response = await fetch(`http://localhost:8000/api/users/${id}/following`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -149,9 +155,9 @@ export default function UserProfilePage({ params }: { params: { id: string } }) 
     }
   };
 
-  const fetchAverageRating = async () => {
+  const fetchAverageRating = async (id: string) => {
     try {
-      const data = await api.getUserAverageRatingById(Number(params.id)) as UserAverageRating;
+      const data = await api.getUserAverageRatingById(Number(id)) as UserAverageRating;
       setAverageRating(data);
     } catch (error) {
       console.error('Erro ao carregar rating médio:', error);
@@ -161,29 +167,60 @@ export default function UserProfilePage({ params }: { params: { id: string } }) 
 
   const handleFollow = async () => {
     try {
-      const method = isFollowing ? 'DELETE' : 'POST';
-      const response = await fetch(`http://localhost:8000/api/users/${params.id}/follow`, {
-        method,
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Falha ao atualizar status de seguimento');
+      if (!userId) return;
+      
+      console.log('=== HANDLE FOLLOW USER PROFILE ===');
+      console.log('userId:', userId);
+      console.log('Estado atual isFollowing:', isFollowing);
+      console.log('Tipo de isFollowing:', typeof isFollowing);
+      
+      let response;
+      if (isFollowing) {
+        // Unfollow
+        console.log('Executando unfollow...');
+        response = await fetch(`http://localhost:8000/api/users/${userId}/unfollow`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+          }
+        });
+      } else {
+        // Follow
+        console.log('Executando follow...');
+        response = await fetch(`http://localhost:8000/api/users/${userId}/follow`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+          }
+        });
       }
-
-      setIsFollowing(!isFollowing);
-      fetchFollowers();
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('=== ERRO NA RESPOSTA ===');
+        console.error('Status:', response.status);
+        console.error('Dados do erro:', errorData);
+        throw new Error(errorData.detail || 'Falha ao atualizar status de seguimento');
+      }
+      
+      const updatedUser = await response.json();
+      console.log('Resposta do backend:', updatedUser);
+      
+      // Atualiza o estado com base no backend
+      const newFollowStatus = updatedUser.is_following;
+      console.log('Novo status de seguimento:', newFollowStatus);
+      setIsFollowing(newFollowStatus);
+      
+      fetchFollowers(userId);
       toast({
         title: "Sucesso",
-        description: isFollowing ? "Deixou de seguir o usuário" : "Usuário seguido com sucesso",
+        description: newFollowStatus ? "Usuário seguido com sucesso" : "Deixou de seguir o usuário",
       });
     } catch (error) {
       console.error('Erro ao atualizar status de seguimento:', error);
       toast({
         title: "Erro",
-        description: "Falha ao atualizar status de seguimento",
+        description: error instanceof Error ? error.message : "Falha ao atualizar status de seguimento",
         variant: "destructive",
       });
     }
@@ -271,16 +308,57 @@ export default function UserProfilePage({ params }: { params: { id: string } }) 
                 </div>
 
                 <div className="pt-4">
+                  {console.log('=== RENDER DO BOTÃO ===')}
+                  {console.log('isFollowing no render:', isFollowing)}
+                  {console.log('Tipo no render:', typeof isFollowing)}
                   <Button
                     onClick={handleFollow}
                     className={`${
                       isFollowing 
-                        ? 'bg-gray-600 hover:bg-gray-700' 
+                        ? 'bg-purple-800 hover:bg-red-600 hover:text-white group' 
                         : 'bg-purple-600 hover:bg-purple-700'
-                    }`}
+                    } transition-colors duration-200 relative`}
                   >
-                    {isFollowing ? 'Deixar de seguir' : 'Seguir'}
+                    <span className={`${isFollowing ? 'group-hover:hidden' : ''}`}>
+                      {isFollowing ? 'Seguindo' : 'Seguir'}
+                    </span>
+                    {isFollowing && (
+                      <span className="hidden group-hover:inline">
+                        Deixar de seguir
+                      </span>
+                    )}
                   </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Seção Rede Social */}
+          <div className="mt-8 pt-8 border-t border-gray-200">
+            <h2 className="text-xl font-heading text-purple-900 mb-4">Rede Social</h2>
+            <div className="flex items-center gap-8 mb-6">
+              <div 
+                className="flex items-center gap-3 cursor-pointer hover:bg-purple-50 p-3 rounded-lg transition-colors"
+                onClick={() => setShowFollowers(true)}
+              >
+                <Users className="w-6 h-6 text-purple-600" />
+                <div>
+                  <p className="text-sm text-gray-500">Seguidores</p>
+                  <p className="text-2xl font-bold text-purple-900">
+                    {followers.length}
+                  </p>
+                </div>
+              </div>
+              <div 
+                className="flex items-center gap-3 cursor-pointer hover:bg-purple-50 p-3 rounded-lg transition-colors"
+                onClick={() => setShowFollowing(true)}
+              >
+                <Users className="w-6 h-6 text-purple-600" />
+                <div>
+                  <p className="text-sm text-gray-500">Seguindo</p>
+                  <p className="text-2xl font-bold text-purple-900">
+                    {following.length}
+                  </p>
                 </div>
               </div>
             </div>
@@ -338,6 +416,64 @@ export default function UserProfilePage({ params }: { params: { id: string } }) 
           )}
         </div>
       </div>
+
+      {/* Modal de Seguidores */}
+      {showFollowers && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40" onClick={e => { if (e.target === e.currentTarget) setShowFollowers(false); }}>
+          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md max-h-[80vh] overflow-y-auto relative">
+            <h2 className="text-xl font-bold mb-4 text-purple-900">Seguidores</h2>
+            <button className="absolute top-4 right-6 text-purple-700 hover:text-purple-900 text-2xl" onClick={() => setShowFollowers(false)}>&times;</button>
+            {followers.length === 0 ? (
+              <p className="text-gray-500">Nenhum seguidor ainda.</p>
+            ) : (
+              <ul className="space-y-4 mb-6">
+                {followers.map(f => (
+                  <li key={f.id} className="flex items-center gap-3">
+                    {f.profile_picture ? (
+                      <img src={`http://localhost:8000${f.profile_picture}`} alt={f.username} className="w-10 h-10 rounded-full object-cover" />
+                    ) : (
+                      <User className="w-10 h-10 text-purple-400" />
+                    )}
+                    <div>
+                      <div className="font-semibold text-purple-900">{f.username}</div>
+                      <div className="text-sm text-gray-500">{f.full_name || 'Não definido'}</div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Seguindo */}
+      {showFollowing && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40" onClick={e => { if (e.target === e.currentTarget) setShowFollowing(false); }}>
+          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md max-h-[80vh] overflow-y-auto relative">
+            <h2 className="text-xl font-bold mb-4 text-purple-900">Seguindo</h2>
+            <button className="absolute top-4 right-6 text-purple-700 hover:text-purple-900 text-2xl" onClick={() => setShowFollowing(false)}>&times;</button>
+            {following.length === 0 ? (
+              <p className="text-gray-500">Não está seguindo ninguém ainda.</p>
+            ) : (
+              <ul className="space-y-4 mb-6">
+                {following.map(f => (
+                  <li key={f.id} className="flex items-center gap-3">
+                    {f.profile_picture ? (
+                      <img src={`http://localhost:8000${f.profile_picture}`} alt={f.username} className="w-10 h-10 rounded-full object-cover" />
+                    ) : (
+                      <User className="w-10 h-10 text-purple-400" />
+                    )}
+                    <div>
+                      <div className="font-semibold text-purple-900">{f.username}</div>
+                      <div className="text-sm text-gray-500">{f.full_name || 'Não definido'}</div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 } 

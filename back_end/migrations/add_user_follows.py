@@ -1,5 +1,5 @@
 from ..configs.settings import settings
-from sqlalchemy import create_engine, MetaData, Table, Column, Integer, ForeignKey
+from sqlalchemy import create_engine, MetaData, Table, Column, Integer, ForeignKey, String, Boolean, DateTime
 from sqlalchemy.orm import sessionmaker
 
 # Criar engine do SQLAlchemy
@@ -19,9 +19,21 @@ def run_migration():
         Column('following_id', Integer, ForeignKey('users.id'), primary_key=True)
     )
 
+    # Criar tabela notifications
+    notifications = Table(
+        'notifications',
+        metadata,
+        Column('id', Integer, primary_key=True),
+        Column('user_id', Integer, ForeignKey('users.id')),
+        Column('type', String),
+        Column('message', String),
+        Column('is_read', Boolean, default=False),
+        Column('created_at', DateTime(timezone=True)),
+    )
+
     # Executar migração
     metadata.create_all(engine)
-    print("Migração concluída: Tabela user_follows criada com sucesso!")
+    print("Migração concluída: Tabela user_follows e notifications criadas com sucesso!")
 
 if __name__ == "__main__":
     run_migration() 

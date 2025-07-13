@@ -32,6 +32,11 @@ export default function SearchPage() {
   const [query, setQuery] = useState(searchParams.get('q') || '');
   const [users, setUsers] = useState<UserSearchResult[]>([]);
   const [loading, setLoading] = useState(false);
+  
+  // Log quando a lista de usuários muda
+  useEffect(() => {
+    console.log('Lista de usuários atualizada:', users.map(u => ({ id: u.id, username: u.username, is_following: u.is_following })));
+  }, [users]);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
@@ -59,7 +64,11 @@ export default function SearchPage() {
     setLoading(true);
     setError(null);
     try {
+      console.log('=== BUSCANDO USUÁRIOS ===');
+      console.log('Query:', searchQuery);
       const data = await api.searchUsers(searchQuery);
+      console.log('Dados retornados da API:', data);
+      console.log('Primeiro usuário:', data[0]);
       setUsers(data);
     } catch (error) {
       console.error('Erro ao buscar usuários:', error);
@@ -76,18 +85,30 @@ export default function SearchPage() {
 
   const handleFollow = async (userId: number, isFollowing: boolean) => {
     try {
+      console.log('=== HANDLE FOLLOW SEARCH ===');
+      console.log('userId:', userId);
+      console.log('Estado atual isFollowing:', isFollowing);
+      console.log('Tipo de isFollowing:', typeof isFollowing);
+      
+      let response;
       if (isFollowing) {
-        await api.unfollowUser(userId);
+        console.log('Executando unfollow...');
+        response = await api.unfollowUser(userId);
       } else {
-        await api.followUser(userId);
+        console.log('Executando follow...');
+        response = await api.followUser(userId);
       }
+
+      console.log('Resposta do backend:', response);
+      const newFollowStatus = response.is_following;
+      console.log('Novo status de seguimento:', newFollowStatus);
 
       // Atualiza a lista de usuários
       setUsers(users.map(user => {
         if (user.id === userId) {
           return {
             ...user,
-            is_following: !isFollowing
+            is_following: newFollowStatus
           };
         }
         return user;
@@ -95,7 +116,7 @@ export default function SearchPage() {
 
       toast({
         title: "Sucesso",
-        description: isFollowing ? "Deixou de seguir o usuário" : "Usuário seguido com sucesso",
+        description: newFollowStatus ? "Usuário seguido com sucesso" : "Deixou de seguir o usuário",
       });
     } catch (error) {
       console.error('Erro ao atualizar status de seguimento:', error);
@@ -188,15 +209,26 @@ export default function SearchPage() {
                       <Button
                         onClick={(e) => {
                           e.stopPropagation();
+                          console.log('=== CLICANDO NO BOTÃO ===');
+                          console.log('Dados completos do usuário:', user);
+                          console.log('user.is_following:', user.is_following);
+                          console.log('Tipo de user.is_following:', typeof user.is_following);
                           handleFollow(user.id, user.is_following);
                         }}
                         className={`${
                           user.is_following 
-                            ? 'bg-gray-600 hover:bg-gray-700' 
+                            ? 'bg-purple-800 hover:bg-red-600 hover:text-white group' 
                             : 'bg-purple-600 hover:bg-purple-700'
-                        }`}
+                        } transition-colors duration-200 relative`}
                       >
-                        {user.is_following ? 'Deixar de seguir' : 'Seguir'}
+                        <span className={`${user.is_following ? 'group-hover:hidden' : ''}`}>
+                          {user.is_following ? 'Seguindo' : 'Seguir'}
+                        </span>
+                        {user.is_following && (
+                          <span className="hidden group-hover:inline">
+                            Deixar de seguir
+                          </span>
+                        )}
                       </Button>
                     </div>
                   </div>

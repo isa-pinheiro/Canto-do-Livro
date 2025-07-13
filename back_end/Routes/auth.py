@@ -45,7 +45,7 @@ async def login_json(login_data: LoginData, db: Session = Depends(get_db)):
 @router.get("/me", response_model=UserResponse)
 async def get_current_user_profile(current_user: dict = Depends(get_current_user), db: Session = Depends(get_db)):
     user_service = UserService(db)
-    return user_service.get_user_by_id(current_user["id"])
+    return user_service.get_user_by_id(current_user["id"], current_user["id"])
 
 @router.post("/me/profile-picture", response_model=UserResponse)
 async def upload_profile_picture(

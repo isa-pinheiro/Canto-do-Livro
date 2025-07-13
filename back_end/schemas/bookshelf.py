@@ -45,3 +45,17 @@ class UserAverageRating(BaseModel):
     total_rated_books: int = Field(ge=0)
     total_read_books: int = Field(ge=0)
     message: str 
+
+class FeedEntry(BaseModel):
+    id: int
+    user_id: int
+    book_id: int
+    status: str
+    pages_read: int
+    total_pages: int
+    rating: Optional[float] = None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True 

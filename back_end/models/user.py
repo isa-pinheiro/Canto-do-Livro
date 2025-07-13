@@ -27,6 +27,7 @@ class User(Base):
 
     # Relationships
     bookshelves = relationship("UserBookshelf", back_populates="user", cascade="all, delete-orphan")
+    notifications = relationship('Notification', back_populates='user', cascade="all, delete-orphan")
 
     # Relacionamentos para seguir/deixar de seguir
     following = relationship(

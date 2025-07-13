@@ -7,16 +7,15 @@ import { useToast } from "@/components/ui/use-toast";
 import { User, ArrowLeft, Users } from 'lucide-react';
 import Image from 'next/image';
 import { api } from '@/config/api';
+import FollowersDialog from '@/components/FollowersDialog';
 
 interface UserProfile {
   id: number;
   username: string;
-  email: string;
+  // email: string; // Removido para não exibir dado sensível
   profile_picture: string | null;
   created_at: string;
   full_name: string;
-  followers_count?: number;
-  following_count?: number;
   is_following?: boolean;
   bookshelf_stats?: {
     total: number;
@@ -25,12 +24,19 @@ interface UserProfile {
     read: number;
     favorite: number;
   };
+  follow_counts: {
+    followers_count: number;
+    following_count: number;
+  };
 }
 
 export default function PublicProfilePage({ params }: { params: { username: string } }) {
   const router = useRouter();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showFollowersDialog, setShowFollowersDialog] = useState(false);
+  const [showFollowingDialog, setShowFollowingDialog] = useState(false);
+  const [dialogType, setDialogType] = useState<'followers' | 'following'>('followers');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -50,16 +56,21 @@ export default function PublicProfilePage({ params }: { params: { username: stri
   const fetchProfile = async () => {
     try {
       setLoading(true);
-      const data = await api.getUserByUsername(params.username);
-      const followers = await api.getUserFollowers(data.id);
-      const following = await api.getUserFollowing(data.id);
+      const data = await api.getUserByUsername(params.username) as UserProfile;
+      console.log('Dados do perfil recebidos:', data);
+      console.log('follow_counts:', data.follow_counts);
+      console.log('Todos os dados:', JSON.stringify(data, null, 2));
       
-      setProfile({
-        ...data,
-        followers_count: followers.length,
-        following_count: following.length,
-        is_following: followers.some((f: any) => f.id === data.id)
-      });
+      // Verificar se follow_counts existe e tem os valores corretos
+      if (data.follow_counts) {
+        console.log('follow_counts existe:', data.follow_counts);
+        console.log('followers_count:', data.follow_counts.followers_count);
+        console.log('following_count:', data.follow_counts.following_count);
+      } else {
+        console.log('follow_counts é null ou undefined');
+      }
+      
+      setProfile(data);
     } catch (error) {
       console.error('Erro ao carregar perfil:', error);
       
@@ -86,29 +97,36 @@ export default function PublicProfilePage({ params }: { params: { username: stri
     if (!profile) return;
     
     try {
+      console.log('Estado atual isFollowing:', profile.is_following);
+      
+      let response;
       if (profile.is_following) {
-        await api.unfollowUser(profile.id);
-        setProfile(prev => prev ? {
-          ...prev,
-          is_following: false,
-          followers_count: (prev.followers_count || 0) - 1
-        } : null);
-        toast({
-          title: "Sucesso",
-          description: "Você deixou de seguir este usuário",
-        });
+        console.log('Executando unfollow...');
+        response = await api.unfollowUser(profile.id);
       } else {
-        await api.followUser(profile.id);
-        setProfile(prev => prev ? {
-          ...prev,
-          is_following: true,
-          followers_count: (prev.followers_count || 0) + 1
-        } : null);
-        toast({
-          title: "Sucesso",
-          description: "Você começou a seguir este usuário",
-        });
+        console.log('Executando follow...');
+        response = await api.followUser(profile.id);
       }
+
+      console.log('Resposta do backend:', response);
+      const newFollowStatus = response.is_following;
+      console.log('Novo status de seguimento:', newFollowStatus);
+
+      setProfile(prev => prev ? {
+        ...prev,
+        is_following: newFollowStatus,
+        follow_counts: {
+          followers_count: newFollowStatus 
+            ? (prev.follow_counts?.followers_count ?? 0) + 1 
+            : (prev.follow_counts?.followers_count ?? 0) - 1,
+          following_count: prev.follow_counts?.following_count ?? 0
+        }
+      } : null);
+
+      toast({
+        title: "Sucesso",
+        description: newFollowStatus ? "Você começou a seguir este usuário" : "Você deixou de seguir este usuário",
+      });
     } catch (error) {
       console.error('Erro ao atualizar status de seguimento:', error);
       toast({
@@ -117,6 +135,16 @@ export default function PublicProfilePage({ params }: { params: { username: stri
         variant: "destructive",
       });
     }
+  };
+
+  const handleShowFollowers = () => {
+    setDialogType('followers');
+    setShowFollowersDialog(true);
+  };
+
+  const handleShowFollowing = () => {
+    setDialogType('following');
+    setShowFollowingDialog(true);
   };
 
   if (loading) {
@@ -198,31 +226,55 @@ export default function PublicProfilePage({ params }: { params: { username: stri
                     })}
                   </p>
                 </div>
-                
-                <div className="flex items-center gap-4 mt-4">
-                  <div className="flex items-center gap-2">
-                    <Users className="w-5 h-5 text-purple-600" />
-                    <div>
-                      <p className="text-sm text-gray-500">Seguidores</p>
-                      <p className="text-lg font-semibold text-purple-900">{profile.followers_count || 0}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Users className="w-5 h-5 text-purple-600" />
-                    <div>
-                      <p className="text-sm text-gray-500">Seguindo</p>
-                      <p className="text-lg font-semibold text-purple-900">{profile.following_count || 0}</p>
-                    </div>
-                  </div>
-                </div>
 
                 <Button
                   onClick={handleFollow}
-                  variant={profile.is_following ? "outline" : "default"}
-                  className={`mt-4 ${profile.is_following ? 'text-purple-600 border-purple-600 hover:bg-purple-50' : 'bg-purple-600 hover:bg-purple-700'}`}
+                  className={`mt-4 ${
+                    profile.is_following 
+                      ? 'bg-purple-800 hover:bg-red-600 hover:text-white group' 
+                      : 'bg-purple-600 hover:bg-purple-700'
+                  } transition-colors duration-200 relative`}
                 >
-                  {profile.is_following ? 'Deixar de Seguir' : 'Seguir'}
+                  <span className={`${profile.is_following ? 'group-hover:hidden' : ''}`}>
+                    {profile.is_following ? 'Seguindo' : 'Seguir'}
+                  </span>
+                  {profile.is_following && (
+                    <span className="hidden group-hover:inline">
+                      Deixar de seguir
+                    </span>
+                  )}
                 </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Contadores de Seguidores e Seguindo */}
+          <div className="mt-8 pt-8 border-t border-gray-200">
+            <h2 className="text-xl font-heading text-purple-900 mb-4">Rede Social</h2>
+            <div className="flex items-center gap-8 mb-6">
+              <div 
+                className="flex items-center gap-3 cursor-pointer hover:bg-purple-50 p-3 rounded-lg transition-colors"
+                onClick={handleShowFollowers}
+              >
+                <Users className="w-6 h-6 text-purple-600" />
+                <div>
+                  <p className="text-sm text-gray-500">Seguidores</p>
+                  <p className="text-2xl font-bold text-purple-900">
+                    {profile.follow_counts?.followers_count ?? 0}
+                  </p>
+                </div>
+              </div>
+              <div 
+                className="flex items-center gap-3 cursor-pointer hover:bg-purple-50 p-3 rounded-lg transition-colors"
+                onClick={handleShowFollowing}
+              >
+                <Users className="w-6 h-6 text-purple-600" />
+                <div>
+                  <p className="text-sm text-gray-500">Seguindo</p>
+                  <p className="text-2xl font-bold text-purple-900">
+                    {profile.follow_counts?.following_count ?? 0}
+                  </p>
+                </div>
               </div>
             </div>
           </div>
@@ -256,6 +308,24 @@ export default function PublicProfilePage({ params }: { params: { username: stri
           )}
         </div>
       </div>
+
+      {/* Modal de Seguidores */}
+      <FollowersDialog
+        isOpen={showFollowersDialog}
+        onClose={() => setShowFollowersDialog(false)}
+        userId={profile.id}
+        type="followers"
+        title="Seguidores"
+      />
+
+      {/* Modal de Seguindo */}
+      <FollowersDialog
+        isOpen={showFollowingDialog}
+        onClose={() => setShowFollowingDialog(false)}
+        userId={profile.id}
+        type="following"
+        title="Seguindo"
+      />
     </div>
   );
 } 

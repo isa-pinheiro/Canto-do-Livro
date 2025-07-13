@@ -1,6 +1,26 @@
 // Configuração da API
 const API_BASE_URL = 'http://localhost:8000/api';
 
+interface UserProfile {
+  id: number;
+  username: string;
+  profile_picture: string | null;
+  created_at: string;
+  full_name: string;
+  is_following?: boolean;
+  bookshelf_stats?: {
+    total: number;
+    want_to_read: number;
+    reading: number;
+    read: number;
+    favorite: number;
+  };
+  follow_counts: {
+    followers_count: number;
+    following_count: number;
+  };
+}
+
 interface ApiError extends Error {
   status?: number;
 }
@@ -22,14 +42,8 @@ async function apiRequest<T>(
       if (!token) {
         throw new Error('Sessão expirada');
       }
-      console.log('Token sendo usado:', token);
       headers['Authorization'] = `Bearer ${token}`;
     }
-
-    console.log('Fazendo requisição para:', `${API_BASE_URL}${endpoint}`);
-    console.log('Método:', method);
-    console.log('Dados:', data);
-    console.log('Headers:', headers);
 
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method,
@@ -37,22 +51,38 @@ async function apiRequest<T>(
       body: data ? JSON.stringify(data) : undefined,
     });
 
-    console.log('Status da resposta:', response.status);
-    console.log('Headers da resposta:', Object.fromEntries(response.headers.entries()));
-
     const responseData = await response.json();
-    console.log('Dados da resposta:', responseData);
 
     if (!response.ok) {
-      console.log('Erro na resposta:', responseData);
       throw new Error(responseData.detail || 'Erro na requisição');
     }
 
     return responseData;
   } catch (error) {
-    console.log('Erro na requisição:', error);
     throw error;
   }
+}
+
+export async function getFeed() {
+  const token = localStorage.getItem('access_token');
+  const res = await fetch(`${API_BASE_URL}/users/feed`, {
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
+  if (!res.ok) throw new Error('Erro ao buscar feed');
+  return res.json();
+}
+
+export async function getNotifications() {
+  const token = localStorage.getItem('access_token');
+  const res = await fetch(`${API_BASE_URL}/users/notifications`, {
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
+  if (!res.ok) throw new Error('Erro ao buscar notificações');
+  return res.json();
 }
 
 // Funções específicas para cada endpoint
@@ -99,7 +129,7 @@ export const api = {
   // User
   getCurrentUser: () => apiRequest<UserProfile>('/auth/me'),
   updateUser: (data: any) => apiRequest('/auth/me', 'PATCH', data),
-  getUserByUsername: (username: string) => apiRequest(`/users/${username}`),
+  getUserByUsername: (username: string) => apiRequest<UserProfile>(`/users/username/${username}`),
 
   // Bookshelf
   getBookshelf: () => apiRequest('/bookshelf'),
@@ -182,8 +212,28 @@ export const api = {
     return response.json();
   },
 
+  async getUserFollowCounts(userId: number) {
+    const response = await fetch(`${API_BASE_URL}/users/${userId}/follow-counts`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+      },
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Falha ao obter os contadores de seguidores');
+    }
+
+    return response.json();
+  },
+
   // Chatbot
   chatbot: async (message: string) => {
     return apiRequest<{ response: string }>('/chatbot', 'POST', { message }, false);
   },
+
+  getFeed,
+  getNotifications,
 }; 

@@ -9,6 +9,10 @@ class BookshelfStats(BaseModel):
     read: int
     favorite: int
 
+class FollowCounts(BaseModel):
+    followers_count: int
+    following_count: int
+
 class UserSearchResponse(BaseModel):
     id: int
     username: str
@@ -16,6 +20,8 @@ class UserSearchResponse(BaseModel):
     profile_picture: Optional[str] = None
     created_at: datetime
     bookshelf_stats: BookshelfStats
+    is_following: Optional[bool] = None
+    follow_counts: Optional[FollowCounts] = None
 
     class Config:
         from_attributes = True
@@ -64,6 +70,21 @@ class UserResponse(UserBase):
     id: int
     created_at: datetime
     bookshelf_stats: Optional[BookshelfStats] = None
+    is_following: Optional[bool] = None
 
     class Config:
-        from_attributes = True 
+        from_attributes = True
+
+class NotificationResponse(BaseModel):
+    id: int
+    type: str
+    message: str
+    is_read: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class FollowResponse(BaseModel):
+    is_following: bool
+    message: str 

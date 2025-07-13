@@ -7,7 +7,6 @@ class BookshelfStats(BaseModel):
     want_to_read: int
     reading: int
     read: int
-    favorite: int
 
 class FollowCounts(BaseModel):
     followers_count: int
@@ -71,6 +70,7 @@ class UserResponse(UserBase):
     created_at: datetime
     bookshelf_stats: Optional[BookshelfStats] = None
     is_following: Optional[bool] = None
+    follow_counts: Optional[FollowCounts] = None
 
     class Config:
         from_attributes = True

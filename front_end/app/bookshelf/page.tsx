@@ -2,15 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import { AddBookDialog } from "@/components/AddBookDialog";
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { Plus } from 'lucide-react';
 import { BookOpen, Star, Calendar } from 'lucide-react';
 import { api } from '@/config/api';
 import { Navbar } from '@/components/Navbar';
@@ -22,7 +17,7 @@ interface Book {
   cover_url?: string;
   publication_year?: number;
   average_rating: number;
-  status: 'to_read' | 'reading' | 'read' | 'favorite';
+  status: 'to_read' | 'reading' | 'read';
   current_page?: number;
   total_pages?: number;
 }
@@ -30,7 +25,7 @@ interface Book {
 interface BookshelfEntry {
   id: number;
   book: Book;
-  status: 'to_read' | 'reading' | 'read' | 'favorite';
+  status: 'to_read' | 'reading' | 'read';
   current_page: number;
   total_pages?: number;
 }
@@ -55,8 +50,8 @@ export default function BookshelfPage() {
     try {
       console.log('Iniciando busca da estante...');
       const data = await api.getBookshelf();
-      console.log('Dados da estante recebidos:', data);
-      setBooks(data);
+
+      setBooks(data as BookshelfEntry[]);
     } catch (error) {
       console.error('Erro completo:', error);
       let errorMessage = 'Falha ao carregar estante';
@@ -102,7 +97,7 @@ export default function BookshelfPage() {
           </div>
 
           <Tabs defaultValue="to_read" className="w-full">
-            <TabsList className="grid w-full grid-cols-4 mb-8">
+            <TabsList className="grid w-full grid-cols-3 mb-8">
               <TabsTrigger value="to_read" className="text-purple-700 data-[state=active]:bg-purple-100">
                 Quero Ler
               </TabsTrigger>
@@ -112,12 +107,9 @@ export default function BookshelfPage() {
               <TabsTrigger value="read" className="text-purple-700 data-[state=active]:bg-purple-100">
                 Lidos
               </TabsTrigger>
-              <TabsTrigger value="favorite" className="text-purple-700 data-[state=active]:bg-purple-100">
-                Favoritos
-              </TabsTrigger>
             </TabsList>
 
-            {['to_read', 'reading', 'read', 'favorite'].map((status) => (
+            {['to_read', 'reading', 'read'].map((status) => (
               <TabsContent key={status} value={status}>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                   {books

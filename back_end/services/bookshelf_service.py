@@ -99,7 +99,7 @@ class BookshelfService:
             )
 
         # Validate the status
-        valid_statuses = ['to_read', 'reading', 'read', 'favorite']
+        valid_statuses = ['to_read', 'reading', 'read']
         if entry_update.status and entry_update.status not in valid_statuses:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,

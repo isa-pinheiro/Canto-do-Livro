@@ -21,7 +21,6 @@ interface UserSearchResult {
     want_to_read: number;
     reading: number;
     read: number;
-    favorite: number;
   };
   is_following: boolean;
 }
@@ -64,11 +63,7 @@ export default function SearchPage() {
     setLoading(true);
     setError(null);
     try {
-      console.log('=== BUSCANDO USUÁRIOS ===');
-      console.log('Query:', searchQuery);
-      const data = await api.searchUsers(searchQuery);
-      console.log('Dados retornados da API:', data);
-      console.log('Primeiro usuário:', data[0]);
+      const data = await api.searchUsers(searchQuery) as UserSearchResult[];
       setUsers(data);
     } catch (error) {
       console.error('Erro ao buscar usuários:', error);
@@ -85,23 +80,16 @@ export default function SearchPage() {
 
   const handleFollow = async (userId: number, isFollowing: boolean) => {
     try {
-      console.log('=== HANDLE FOLLOW SEARCH ===');
-      console.log('userId:', userId);
-      console.log('Estado atual isFollowing:', isFollowing);
-      console.log('Tipo de isFollowing:', typeof isFollowing);
+
       
       let response;
       if (isFollowing) {
-        console.log('Executando unfollow...');
         response = await api.unfollowUser(userId);
       } else {
-        console.log('Executando follow...');
         response = await api.followUser(userId);
       }
 
-      console.log('Resposta do backend:', response);
       const newFollowStatus = response.is_following;
-      console.log('Novo status de seguimento:', newFollowStatus);
 
       // Atualiza a lista de usuários
       setUsers(users.map(user => {
@@ -175,7 +163,7 @@ export default function SearchPage() {
                   <div
                     key={user.id}
                     className="bg-purple-50 rounded-lg p-4 hover:bg-purple-100 transition-colors cursor-pointer"
-                    onClick={() => router.push(`/users/${user.id}`)}
+                    onClick={() => router.push(`/profile/${user.username}`)}
                   >
                     <div className="flex items-center gap-4">
                       <div className="relative w-16 h-16 rounded-full overflow-hidden bg-purple-200">
@@ -209,10 +197,6 @@ export default function SearchPage() {
                       <Button
                         onClick={(e) => {
                           e.stopPropagation();
-                          console.log('=== CLICANDO NO BOTÃO ===');
-                          console.log('Dados completos do usuário:', user);
-                          console.log('user.is_following:', user.is_following);
-                          console.log('Tipo de user.is_following:', typeof user.is_following);
                           handleFollow(user.id, user.is_following);
                         }}
                         className={`${

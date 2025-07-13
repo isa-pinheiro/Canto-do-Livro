@@ -31,7 +31,6 @@ export default function LoginPage() {
 
     try {
       console.log('Iniciando tentativa de login...');
-      console.log('Dados sendo enviados:', { username, password: '****' });
 
       const response = await fetch('http://localhost:8000/api/auth/token', {
         method: 'POST',
@@ -52,7 +51,6 @@ export default function LoginPage() {
       let data;
       try {
         data = await response.json();
-        console.log('Dados recebidos:', data);
       } catch (e) {
         console.error('Erro ao parsear resposta:', e);
         throw new Error('Erro ao processar resposta do servidor');

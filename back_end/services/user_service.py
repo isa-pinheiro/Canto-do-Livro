@@ -118,16 +118,14 @@ class UserService:
             func.count(UserBookshelf.id).label('total'),
             func.sum(case((UserBookshelf.status == 'to_read', 1), else_=0)).label('want_to_read'),
             func.sum(case((UserBookshelf.status == 'reading', 1), else_=0)).label('reading'),
-            func.sum(case((UserBookshelf.status == 'read', 1), else_=0)).label('read'),
-            func.sum(case((UserBookshelf.status == 'favorite', 1), else_=0)).label('favorite')
+            func.sum(case((UserBookshelf.status == 'read', 1), else_=0)).label('read')
         ).filter(UserBookshelf.user_id == user_id).first()
 
         return {
             'total': bookshelf_stats.total or 0,
             'want_to_read': bookshelf_stats.want_to_read or 0,
             'reading': bookshelf_stats.reading or 0,
-            'read': bookshelf_stats.read or 0,
-            'favorite': bookshelf_stats.favorite or 0
+            'read': bookshelf_stats.read or 0
         }
 
     def get_follow_counts(self, user_id: int) -> dict:

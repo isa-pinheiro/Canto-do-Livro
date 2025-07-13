@@ -28,7 +28,7 @@ class UserBookshelf(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"))
     book_id = Column(Integer, ForeignKey("books.id"))
-    status = Column(String, default="to_read")  # to_read, reading, read, favorite
+    status = Column(String, default="to_read")  # to_read, reading, read
     pages_read = Column(Integer, default=0)
     total_pages = Column(Integer)
     rating = Column(Float, nullable=True) # 1 to 5 stars, with 0.5 increments

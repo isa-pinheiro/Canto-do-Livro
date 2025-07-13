@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field, validator
 from back_end.schemas.book import Book
 
 class BookshelfEntryBase(BaseModel):
-    status: Literal['to_read', 'reading', 'read', 'favorite'] = 'to_read'
+    status: Literal['to_read', 'reading', 'read'] = 'to_read'
     pages_read: int = Field(ge=0, default=0)
     total_pages: Optional[int] = Field(ge=0, default=None)
     rating: Optional[float] = Field(default=None, ge=1, le=5)
@@ -19,7 +19,7 @@ class BookshelfEntryCreate(BookshelfEntryBase):
     book_id: int
 
 class BookshelfEntryUpdate(BaseModel):
-    status: Optional[Literal['to_read', 'reading', 'read', 'favorite']] = None
+    status: Optional[Literal['to_read', 'reading', 'read']] = None
     pages_read: Optional[int] = Field(ge=0, default=None)
     total_pages: Optional[int] = Field(ge=0, default=None)
     rating: Optional[float] = Field(default=None, ge=1, le=5)

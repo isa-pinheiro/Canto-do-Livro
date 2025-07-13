@@ -44,7 +44,7 @@ interface Book {
 
 interface BookshelfEntry {
   id: number;
-  status: 'to_read' | 'reading' | 'read' | 'favorite';
+  status: 'to_read' | 'reading' | 'read';
   pages_read: number;
   total_pages: number;
   rating: number | null;
@@ -83,9 +83,7 @@ export default function BookDetailsPage({ params }: { params: Promise<{ id: stri
 
   const fetchBookDetails = async () => {
     try {
-      console.log('Buscando detalhes do livro...');
       const data = await api.getBookDetails(parseInt(resolvedParams.id));
-      console.log('Dados recebidos:', data);
       setBook(data.book);
       setBookshelfEntry(data.bookshelf_entry);
     } catch (error) {
@@ -353,7 +351,6 @@ export default function BookDetailsPage({ params }: { params: Promise<{ id: stri
                           <SelectItem value="to_read">Quero Ler</SelectItem>
                           <SelectItem value="reading">Lendo</SelectItem>
                           <SelectItem value="read">Lido</SelectItem>
-                          <SelectItem value="favorite">Favorito</SelectItem>
                         </SelectContent>
                       </Select>
 

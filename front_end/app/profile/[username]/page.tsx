@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
@@ -22,7 +22,6 @@ interface UserProfile {
     want_to_read: number;
     reading: number;
     read: number;
-    favorite: number;
   };
   follow_counts: {
     followers_count: number;
@@ -30,18 +29,38 @@ interface UserProfile {
   };
 }
 
-export default function PublicProfilePage({ params }: { params: { username: string } }) {
+interface UserAverageRating {
+  average_rating: number;
+  total_rated_books: number;
+  total_read_books: number;
+  message: string;
+}
+
+export default function PublicProfilePage({ params }: { params: Promise<{ username: string }> }) {
   const router = useRouter();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [showFollowersDialog, setShowFollowersDialog] = useState(false);
   const [showFollowingDialog, setShowFollowingDialog] = useState(false);
   const [dialogType, setDialogType] = useState<'followers' | 'following'>('followers');
+  const [averageRating, setAverageRating] = useState<UserAverageRating | null>(null);
   const { toast } = useToast();
+
+  // Unwrap the params Promise
+  const resolvedParams = React.use(params);
+  const username = resolvedParams.username;
 
   useEffect(() => {
     fetchProfile();
-  }, [params.username]);
+  }, [username]);
+
+  useEffect(() => {
+    if (profile?.id) {
+      api.getUserAverageRatingById(profile.id)
+        .then((data) => setAverageRating(data as UserAverageRating))
+        .catch(() => setAverageRating(null));
+    }
+  }, [profile?.id]);
 
   const handleAuthError = () => {
     api.logout();
@@ -56,10 +75,8 @@ export default function PublicProfilePage({ params }: { params: { username: stri
   const fetchProfile = async () => {
     try {
       setLoading(true);
-      const data = await api.getUserByUsername(params.username) as UserProfile;
-      console.log('Dados do perfil recebidos:', data);
-      console.log('follow_counts:', data.follow_counts);
-      console.log('Todos os dados:', JSON.stringify(data, null, 2));
+      const data = await api.getUserByUsername(username) as UserProfile;
+
       
       // Verificar se follow_counts existe e tem os valores corretos
       if (data.follow_counts) {
@@ -97,7 +114,7 @@ export default function PublicProfilePage({ params }: { params: { username: stri
     if (!profile) return;
     
     try {
-      console.log('Estado atual isFollowing:', profile.is_following);
+
       
       let response;
       if (profile.is_following) {
@@ -282,7 +299,7 @@ export default function PublicProfilePage({ params }: { params: { username: stri
           {profile.bookshelf_stats && (
             <div className="mt-8 pt-8 border-t border-gray-200">
               <h2 className="text-xl font-heading text-purple-900 mb-4">Estatísticas da Estante</h2>
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="bg-purple-50 p-4 rounded-lg text-center">
                   <p className="text-sm text-purple-600">Total</p>
                   <p className="text-2xl font-bold text-purple-900">{profile.bookshelf_stats.total}</p>
@@ -299,9 +316,31 @@ export default function PublicProfilePage({ params }: { params: { username: stri
                   <p className="text-sm text-purple-600">Lidos</p>
                   <p className="text-2xl font-bold text-purple-900">{profile.bookshelf_stats.read}</p>
                 </div>
-                <div className="bg-purple-50 p-4 rounded-lg text-center">
-                  <p className="text-sm text-purple-600">Favoritos</p>
-                  <p className="text-2xl font-bold text-purple-900">{profile.bookshelf_stats.favorite}</p>
+              </div>
+            </div>
+          )}
+
+          {averageRating && (
+            <div className="mt-8 pt-8 border-t">
+              <h2 className="text-xl font-heading text-purple-900 mb-4">Avaliação Média</h2>
+              <div className="bg-purple-50 p-6 rounded-lg">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    {/* Substitua por seu componente de estrelas, se houver */}
+                    <span className="text-2xl text-yellow-400">★</span>
+                    <span className="text-lg font-medium text-purple-900">
+                      {averageRating.average_rating.toFixed(1)} / 5.0
+                    </span>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-purple-700">
+                  <div>
+                    <p><strong>Livros avaliados:</strong> {averageRating.total_rated_books}</p>
+                    <p><strong>Total de livros lidos:</strong> {averageRating.total_read_books}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-purple-600">{averageRating.message}</p>
+                  </div>
                 </div>
               </div>
             </div>

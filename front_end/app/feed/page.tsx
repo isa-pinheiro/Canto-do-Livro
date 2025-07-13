@@ -3,8 +3,7 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Card, CardHeader, CardContent, CardTitle, CardDescription } from "@/components/ui/card"
+import { Card } from "@/components/ui/card"
 import { api } from '@/config/api';
 
 interface FeedEntry {
@@ -92,7 +91,6 @@ export default function Dashboard() {
 function renderStatus(status: string) {
   if (status === 'reading') return ' começou a ler um livro';
   if (status === 'read') return ' concluiu a leitura de um livro';
-  if (status === 'favorite') return ' favoritou um livro';
   return '';
 }
 
@@ -103,8 +101,6 @@ function renderFeedMessage(entry: FeedEntry) {
     msg = 'começou a ler';
   } else if (entry.status === 'read') {
     msg = 'concluiu a leitura de';
-  } else if (entry.status === 'favorite') {
-    msg = 'favoritou';
   }
   // Exibe progresso se houver
   if (entry.pages_read && entry.total_pages) {

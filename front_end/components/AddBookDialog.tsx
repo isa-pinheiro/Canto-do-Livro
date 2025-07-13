@@ -142,7 +142,6 @@ export function AddBookDialog({ onBookAdded }: AddBookDialogProps) {
                 <SelectItem value="to_read">Quero Ler</SelectItem>
                 <SelectItem value="reading">Lendo</SelectItem>
                 <SelectItem value="read">Lidos</SelectItem>
-                <SelectItem value="favorite">Favoritos</SelectItem>
               </SelectContent>
             </Select>
           </div>

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
-import { User, LogOut, Save, X, Camera } from 'lucide-react';
+import { User, LogOut, Save, X, Camera, Users } from 'lucide-react';
 import Image from 'next/image';
 import { api } from '@/config/api';
 import { StarRatingDisplay } from '@/components/ui/StarRating';
@@ -24,7 +24,10 @@ interface UserProfile {
     want_to_read: number;
     reading: number;
     read: number;
-    favorite: number;
+  };
+  follow_counts?: {
+    followers_count: number;
+    following_count: number;
   };
 }
 
@@ -197,7 +200,7 @@ export default function ProfilePage() {
         updateData.password = formData.new_password;
       }
 
-      console.log('Enviando dados para atualização:', updateData);
+
 
       try {
         const updatedUser = await api.updateUser(updateData) as UserProfile;
@@ -525,7 +528,7 @@ export default function ProfilePage() {
             {userData?.bookshelf_stats && (
               <div className="mt-8 pt-8 border-t">
                 <h2 className="text-xl font-heading text-purple-900 mb-4">Estatísticas da Estante</h2>
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="bg-purple-50 p-4 rounded-lg text-center">
                     <p className="text-2xl font-bold text-purple-900">{userData.bookshelf_stats.total}</p>
                     <p className="text-sm text-purple-700">Total</p>
@@ -542,9 +545,32 @@ export default function ProfilePage() {
                     <p className="text-2xl font-bold text-purple-900">{userData.bookshelf_stats.read}</p>
                     <p className="text-sm text-purple-700">Lidos</p>
                   </div>
-                  <div className="bg-purple-50 p-4 rounded-lg text-center">
-                    <p className="text-2xl font-bold text-purple-900">{userData.bookshelf_stats.favorite}</p>
-                    <p className="text-sm text-purple-700">Favoritos</p>
+                </div>
+              </div>
+            )}
+
+            {/* Contadores de Seguidores e Seguindo */}
+            {userData?.follow_counts && (
+              <div className="mt-8 pt-8 border-t border-gray-200">
+                <h2 className="text-xl font-heading text-purple-900 mb-4">Rede Social</h2>
+                <div className="flex items-center gap-8 mb-6">
+                  <div className="flex items-center gap-3 p-3 rounded-lg bg-purple-50">
+                    <Users className="w-6 h-6 text-purple-600" />
+                    <div>
+                      <p className="text-sm text-gray-500">Seguidores</p>
+                      <p className="text-2xl font-bold text-purple-900">
+                        {userData.follow_counts.followers_count}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 p-3 rounded-lg bg-purple-50">
+                    <Users className="w-6 h-6 text-purple-600" />
+                    <div>
+                      <p className="text-sm text-gray-500">Seguindo</p>
+                      <p className="text-2xl font-bold text-purple-900">
+                        {userData.follow_counts.following_count}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>

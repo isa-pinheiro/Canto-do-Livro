@@ -20,7 +20,6 @@ interface User {
     want_to_read: number;
     reading: number;
     read: number;
-    favorite: number;
   };
   follow_counts: {
     followers_count: number;

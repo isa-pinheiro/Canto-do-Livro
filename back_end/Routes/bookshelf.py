@@ -12,7 +12,7 @@ router = APIRouter(prefix="/bookshelf", tags=["bookshelf"])
 
 @router.get("/", response_model=List[BookshelfEntry])
 async def get_bookshelf(
-    status: Optional[str] = Query(None, pattern='^(to_read|reading|read|favorite)$'),
+    status: Optional[str] = Query(None, pattern='^(to_read|reading|read)$'),
     current_user: dict = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):

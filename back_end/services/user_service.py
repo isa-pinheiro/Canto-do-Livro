@@ -36,16 +36,17 @@ class UserService:
         
         # Se for o próprio usuário, retorna UserResponse (com email, etc)
         if current_user_id is not None and user_id == current_user_id:
-            return {
+            result = {
                 "id": user.id,
                 "username": user.username,
                 "email": user.email,
                 "full_name": user.full_name,
                 "profile_picture": user.profile_picture,
-                "created_at": user.created_at,
+                "created_at": user.created_at or datetime.now(),
                 "bookshelf_stats": stats_dict,
                 "follow_counts": follow_counts
             }
+            return result
         
         # Se for outro usuário, verifica se o usuário atual está seguindo
         is_following = False
@@ -53,12 +54,6 @@ class UserService:
             current_user_obj = self.db.query(User).filter(User.id == current_user_id).first()
             if current_user_obj:
                 is_following = user in current_user_obj.following
-                print(f"=== GET_USER_BY_ID DEBUG ===")
-                print(f"User ID: {user_id}")
-                print(f"Current user ID: {current_user_id}")
-                print(f"Current user following count: {len(current_user_obj.following)}")
-                print(f"Current user following IDs: {[u.id for u in current_user_obj.following]}")
-                print(f"User {user.id} in following: {is_following}")
         
         # Retorna dados públicos com informação de seguimento
         return {
@@ -66,17 +61,13 @@ class UserService:
             "username": user.username,
             "full_name": user.full_name,
             "profile_picture": user.profile_picture,
-            "created_at": user.created_at,
+            "created_at": user.created_at or datetime.now(),
             "bookshelf_stats": stats_dict,
             "is_following": is_following,
             "follow_counts": follow_counts
         }
 
-    def get_user_by_username(self, username: str, current_user_id: int = None) -> UserSearchResponse:
-        print(f"=== GET_USER_BY_USERNAME DEBUG ===")
-        print(f"Username: {username}")
-        print(f"Current user ID: {current_user_id}")
-        
+    def get_user_by_username(self, username: str, current_user_id: int = None) -> UserSearchResponse:        
         user = self.db.query(User).filter(User.username == username).first()
         if not user:
             raise HTTPException(
@@ -86,11 +77,6 @@ class UserService:
         
         stats_dict = self.get_user_stats(user.id)
         follow_counts = self.get_follow_counts(user.id)
-        
-        print(f"User ID: {user.id}")
-        print(f"Follow counts: {follow_counts}")
-        print(f"User followers: {len(user.followers)}")
-        print(f"User following: {len(user.following)}")
         
         # Verifica se o usuário atual está seguindo
         is_following = False
@@ -104,13 +90,12 @@ class UserService:
             "username": user.username,
             "full_name": user.full_name,
             "profile_picture": user.profile_picture,
-            "created_at": user.created_at,
+            "created_at": user.created_at or datetime.now(),
             "bookshelf_stats": stats_dict,
             "is_following": is_following,
             "follow_counts": follow_counts
         }
         
-        print(f"Returning result: {result}")
         return result
 
     def get_user_stats(self, user_id: int) -> dict:
@@ -128,11 +113,7 @@ class UserService:
             'read': bookshelf_stats.read or 0
         }
 
-    def get_follow_counts(self, user_id: int) -> dict:
-        """Retorna os contadores de seguidores e seguindo para um usuário"""
-        print(f"=== GET_FOLLOW_COUNTS DEBUG ===")
-        print(f"User ID: {user_id}")
-        
+    def get_follow_counts(self, user_id: int) -> dict:        
         user = self.db.query(User).filter(User.id == user_id).first()
         if not user:
             print(f"User not found for ID: {user_id}")
@@ -141,28 +122,15 @@ class UserService:
         followers_count = len(user.followers)
         following_count = len(user.following)
         
-        print(f"Followers count: {followers_count}")
-        print(f"Following count: {following_count}")
-        
         result = {
             'followers_count': followers_count,
             'following_count': following_count
         }
         
-        print(f"Returning follow counts: {result}")
         return result
 
     def follow_user(self, current_user: dict, user_to_follow_id: int) -> dict:
-        print(f"=== FOLLOW_USER DEBUG ===")
-        print(f"Current user ID: {current_user['id']}")
-        print(f"User to follow ID: {user_to_follow_id}")
-        
         current_user_obj = self.db.query(User).filter(User.id == current_user["id"]).first()
-        print(f"Current user found: {current_user_obj is not None}")
-        
-        if current_user_obj:
-            print(f"Current user following count: {len(current_user_obj.following)}")
-            print(f"Current user following IDs: {[u.id for u in current_user_obj.following]}")
         
         if user_to_follow_id == current_user_obj.id:
             raise HTTPException(
@@ -177,7 +145,6 @@ class UserService:
             )
         
         is_already_following = user_to_follow in current_user_obj.following
-        print(f"User {user_to_follow_id} already in following: {is_already_following}")
         
         if is_already_following:
             raise HTTPException(
@@ -200,16 +167,8 @@ class UserService:
         }
 
     def unfollow_user(self, current_user: dict, user_to_unfollow_id: int) -> dict:
-        print(f"=== UNFOLLOW_USER DEBUG ===")
-        print(f"Current user ID: {current_user['id']}")
-        print(f"User to unfollow ID: {user_to_unfollow_id}")
         
         current_user_obj = self.db.query(User).filter(User.id == current_user["id"]).first()
-        print(f"Current user found: {current_user_obj is not None}")
-        
-        if current_user_obj:
-            print(f"Current user following count: {len(current_user_obj.following)}")
-            print(f"Current user following IDs: {[u.id for u in current_user_obj.following]}")
         
         if user_to_unfollow_id == current_user_obj.id:
             raise HTTPException(
@@ -224,7 +183,6 @@ class UserService:
             )
         
         is_following = user_to_unfollow in current_user_obj.following
-        print(f"User {user_to_unfollow_id} in following: {is_following}")
         
         if not is_following:
             raise HTTPException(
@@ -256,7 +214,7 @@ class UserService:
                 "username": follower.username,
                 "full_name": follower.full_name,
                 "profile_picture": follower.profile_picture,
-                "created_at": follower.created_at,
+                "created_at": follower.created_at or datetime.now(),
                 "bookshelf_stats": stats_dict,
                 "follow_counts": follow_counts
             })
@@ -279,16 +237,13 @@ class UserService:
                 "username": followed.username,
                 "full_name": followed.full_name,
                 "profile_picture": followed.profile_picture,
-                "created_at": followed.created_at,
+                "created_at": followed.created_at or datetime.now(),
                 "bookshelf_stats": stats_dict,
                 "follow_counts": follow_counts
             })
         return results
 
     def search_users(self, query: str, current_user_id: int) -> List[UserSearchResponse]:
-        print(f"=== SEARCH_USERS DEBUG ===")
-        print(f"Query: {query}")
-        print(f"Current user ID: {current_user_id}")
         
         users = self.db.query(User).filter(
             User.id != current_user_id,
@@ -300,29 +255,19 @@ class UserService:
 
         results = []
         current_user_obj = self.db.query(User).filter(User.id == current_user_id).first()
-        print(f"Current user found: {current_user_obj is not None}")
-        if current_user_obj:
-            print(f"Current user following count: {len(current_user_obj.following)}")
-            print(f"Current user following IDs: {[u.id for u in current_user_obj.following]}")
         
         for user in users:
             stats_dict = self.get_user_stats(user.id)
             follow_counts = self.get_follow_counts(user.id)
             is_following = user in current_user_obj.following if current_user_obj else False
             created_at = user.created_at or datetime.now()
-            
-            print(f"User {user.id} ({user.username}): is_following = {is_following}")
-            if current_user_obj:
-                print(f"  - Current user following list: {[u.id for u in current_user_obj.following]}")
-                print(f"  - User {user.id} in following list: {user.id in [u.id for u in current_user_obj.following]}")
-                print(f"  - Direct check: {user in current_user_obj.following}")
 
             results.append({
                 "id": user.id,
                 "username": user.username,
                 "full_name": user.full_name,
                 "profile_picture": user.profile_picture,
-                "created_at": created_at,
+                "created_at": created_at or datetime.now(),
                 "bookshelf_stats": stats_dict,
                 "is_following": is_following,
                 "follow_counts": follow_counts
@@ -390,7 +335,6 @@ class UserService:
         notifications = self.db.query(Notification).filter(Notification.user_id == user_id).order_by(Notification.created_at.desc()).all()
         result = []
         for n in notifications:
-            print(f"Notificação: id={n.id}, type={n.type}, message={n.message}, is_read={n.is_read}, created_at={n.created_at}")
             try:
                 notif = NotificationResponse.from_orm(n)
                 result.append(notif)
@@ -398,13 +342,112 @@ class UserService:
                 print(f"Erro ao converter notificação id={n.id}: {e}")
         return result
 
-    def get_feed(self, user_id: int, limit: int = 20):
+    def safe_int(self, val):
+        try:
+            return int(val)
+        except (TypeError, ValueError):
+            return None
+
+    def safe_float(self, val):
+        try:
+            return float(val)
+        except (TypeError, ValueError):
+            return None
+
+    def get_feed(self, user_id: int, limit: int = 20):        
         user = self.db.query(User).filter(User.id == user_id).first()
         if not user:
             return []
+        
         followed_ids = [u.id for u in user.following]
+        
         if not followed_ids:
             return []
-        from back_end.models.bookshelf import UserBookshelf
+        
+        from back_end.models.bookshelf import UserBookshelf, Book
         feed_entries = self.db.query(UserBookshelf).filter(UserBookshelf.user_id.in_(followed_ids)).order_by(UserBookshelf.updated_at.desc()).limit(limit).all()
-        return feed_entries 
+        
+        if not feed_entries:
+            return []
+        
+        # Serializar os dados para o formato esperado pelo schema FeedEntry
+        result = []
+        for entry in feed_entries:
+            try:
+                # Buscar informações do usuário SEMPRE ATUALIZADAS
+                user_info = None
+                if entry.user_id:
+                    fresh_user = self.db.query(User).filter(User.id == entry.user_id).first()
+                    if fresh_user:
+                        user_info = {
+                            "id": self.safe_int(fresh_user.id),
+                            "username": fresh_user.username,
+                            "full_name": fresh_user.full_name,
+                            "profile_picture": fresh_user.profile_picture
+                        }
+                # Buscar informações do livro
+                book_info = None
+                if entry.book:
+                    book_info = {
+                        "id": self.safe_int(entry.book.id),
+                        "name": entry.book.name,
+                        "subtitle": entry.book.subtitle,
+                        "cover_url": entry.book.cover_url,
+                        "num_pages": self.safe_int(entry.book.num_pages) if entry.book.num_pages is not None else None,
+                        "average_rating": self.safe_float(entry.book.average_rating) if entry.book.average_rating is not None else None
+                    }
+                # Determinar o tipo de atividade
+                activity_type = self._determine_activity_type(entry)
+                entry_data = {
+                    "id": self.safe_int(entry.id),
+                    "user_id": self.safe_int(entry.user_id),
+                    "book_id": self.safe_int(entry.book_id),
+                    "status": str(entry.status) if entry.status is not None else None,
+                    "pages_read": self.safe_int(entry.pages_read) if entry.pages_read is not None else None,
+                    "total_pages": self.safe_int(entry.total_pages) if entry.total_pages is not None else None,
+                    "rating": self.safe_float(entry.rating) if entry.rating is not None else None,
+                    "is_favorite": bool(entry.is_favorite) if entry.is_favorite is not None else False,
+                    "created_at": (entry.created_at or datetime.now()).isoformat(),
+                    "updated_at": (entry.updated_at or datetime.now()).isoformat(),
+                    "user": user_info,
+                    "book": book_info,
+                    "activity_type": activity_type
+                }
+                result.append(entry_data)
+            except Exception as e:
+                print(f"Error serializing entry {getattr(entry, 'id', 'unknown')}: {e}")
+                import traceback
+                traceback.print_exc()
+                continue
+        
+        # Garantir que sempre retorne uma lista
+        if not isinstance(result, list):
+            print("Result is not a list, returning empty list")
+            return []
+        
+        return result
+    
+    def _determine_activity_type(self, entry):
+        """Determina o tipo de atividade baseado nas mudanças recentes"""
+        # Se tem rating, é uma avaliação
+        if entry.rating is not None:
+            return "rating"
+        # Se é favorito, pode ser uma marcação como favorito
+        elif entry.is_favorite:
+            return "favorite"
+        # Se mudou o status para 'read', é conclusão de leitura
+        elif entry.status == 'read':
+            return "completed"
+        # Se mudou o status para 'reading', é início de leitura
+        elif entry.status == 'reading':
+            return "started_reading"
+        # Se tem progresso de páginas, é atualização de progresso
+        elif entry.pages_read > 0:
+            return "progress"
+        # Se mudou para 'to_read', é adição à lista
+        elif entry.status == 'to_read':
+            return "added_to_shelf"
+        else:
+            return "update" 
+
+    

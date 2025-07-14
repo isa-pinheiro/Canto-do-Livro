@@ -1,9 +1,10 @@
 // Configuração da API
-const API_BASE_URL = 'http://localhost:8000/api';
+export const API_BASE_URL = 'http://localhost:8000/api';
 
 interface UserProfile {
   id: number;
   username: string;
+  email?: string;
   profile_picture: string | null;
   created_at: string;
   full_name: string;
@@ -64,13 +65,158 @@ async function apiRequest<T>(
 
 export async function getFeed() {
   const token = localStorage.getItem('access_token');
+  if (!token) {
+    throw new Error('Token não encontrado');
+  }
+  
+  console.log('Fetching feed from:', `${API_BASE_URL}/users/feed`);
+  
   const res = await fetch(`${API_BASE_URL}/users/feed`, {
     headers: {
       'Authorization': `Bearer ${token}`
     }
   });
-  if (!res.ok) throw new Error('Erro ao buscar feed');
-  return res.json();
+  
+  console.log('Feed response status:', res.status);
+  
+  if (!res.ok) {
+    let errorMessage = `Erro ao buscar feed: ${res.status}`;
+    try {
+      const errorData = await res.json();
+      console.error('Feed error response:', errorData);
+      if (errorData.detail) {
+        if (Array.isArray(errorData.detail)) {
+          errorMessage = errorData.detail.map((err: any) => err.msg || err.message || err).join(', ');
+        } else {
+          errorMessage = errorData.detail;
+        }
+      }
+    } catch (e) {
+      console.error('Error parsing error response:', e);
+    }
+    throw new Error(errorMessage);
+  }
+  
+  const data = await res.json();
+  console.log('Feed data received:', data);
+  return data;
+}
+
+export async function getFeedDebug() {
+  const token = localStorage.getItem('access_token');
+  if (!token) {
+    throw new Error('Token não encontrado');
+  }
+  
+  console.log('Fetching feed debug from:', `${API_BASE_URL}/users/feed-debug`);
+  
+  const res = await fetch(`${API_BASE_URL}/users/feed-debug`, {
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
+  
+  console.log('Feed debug response status:', res.status);
+  
+  if (!res.ok) {
+    let errorMessage = `Erro ao buscar feed debug: ${res.status}`;
+    try {
+      const errorData = await res.json();
+      console.error('Feed debug error response:', errorData);
+      if (errorData.detail) {
+        if (Array.isArray(errorData.detail)) {
+          errorMessage = errorData.detail.map((err: any) => err.msg || err.message || err).join(', ');
+        } else {
+          errorMessage = errorData.detail;
+        }
+      }
+    } catch (e) {
+      console.error('Error parsing error response:', e);
+    }
+    throw new Error(errorMessage);
+  }
+  
+  const data = await res.json();
+  console.log('Feed debug data received:', data);
+  return data;
+}
+
+export async function getFeedSimple() {
+  const token = localStorage.getItem('access_token');
+  if (!token) {
+    throw new Error('Token não encontrado');
+  }
+  
+  console.log('Fetching feed simple from:', `${API_BASE_URL}/users/feed-simple`);
+  
+  const res = await fetch(`${API_BASE_URL}/users/feed-simple`, {
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
+  
+  console.log('Feed simple response status:', res.status);
+  
+  if (!res.ok) {
+    let errorMessage = `Erro ao buscar feed simple: ${res.status}`;
+    try {
+      const errorData = await res.json();
+      console.error('Feed simple error response:', errorData);
+      if (errorData.detail) {
+        if (Array.isArray(errorData.detail)) {
+          errorMessage = errorData.detail.map((err: any) => err.msg || err.message || err).join(', ');
+        } else {
+          errorMessage = errorData.detail;
+        }
+      }
+    } catch (e) {
+      console.error('Error parsing error response:', e);
+    }
+    throw new Error(errorMessage);
+  }
+  
+  const data = await res.json();
+  console.log('Feed simple data received:', data);
+  return data;
+}
+
+export async function getFeedRobust() {
+  const token = localStorage.getItem('access_token');
+  if (!token) {
+    throw new Error('Token não encontrado');
+  }
+  
+  console.log('Fetching feed robust from:', `${API_BASE_URL}/users/feed-robust`);
+  
+  const res = await fetch(`${API_BASE_URL}/users/feed-robust`, {
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
+  
+  console.log('Feed robust response status:', res.status);
+  
+  if (!res.ok) {
+    let errorMessage = `Erro ao buscar feed robust: ${res.status}`;
+    try {
+      const errorData = await res.json();
+      console.error('Feed robust error response:', errorData);
+      if (errorData.detail) {
+        if (Array.isArray(errorData.detail)) {
+          errorMessage = errorData.detail.map((err: any) => err.msg || err.message || err).join(', ');
+        } else {
+          errorMessage = errorData.detail;
+        }
+      }
+    } catch (e) {
+      console.error('Error parsing error response:', e);
+    }
+    throw new Error(errorMessage);
+  }
+  
+  const data = await res.json();
+  console.log('Feed robust data received:', data);
+  return data;
 }
 
 export async function getNotifications() {
@@ -235,5 +381,8 @@ export const api = {
   },
 
   getFeed,
+  getFeedDebug,
+  getFeedSimple,
+  getFeedRobust,
   getNotifications,
-}; 
+};

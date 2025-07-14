@@ -20,7 +20,7 @@ class Book(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    bookshelves = relationship("UserBookshelf")
+    bookshelves = relationship("UserBookshelf", back_populates="book")
 
 class UserBookshelf(Base):
     __tablename__ = "user_bookshelves"
@@ -36,5 +36,5 @@ class UserBookshelf(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    user = relationship("User")
-    book = relationship("Book") 
+    user = relationship("User", back_populates="bookshelves")
+    book = relationship("Book", back_populates="bookshelves") 

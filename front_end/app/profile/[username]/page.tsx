@@ -324,22 +324,17 @@ export default function PublicProfilePage({ params }: { params: Promise<{ userna
             <div className="mt-8 pt-8 border-t">
               <h2 className="text-xl font-heading text-purple-900 mb-4">Avaliação Média</h2>
               <div className="bg-purple-50 p-6 rounded-lg">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+                  <div className="flex items-center gap-3 justify-center md:justify-start mb-4 md:mb-0">
                     {/* Substitua por seu componente de estrelas, se houver */}
                     <span className="text-2xl text-yellow-400">★</span>
                     <span className="text-lg font-medium text-purple-900">
                       {averageRating.average_rating.toFixed(1)} / 5.0
                     </span>
                   </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-purple-700">
-                  <div>
+                  <div className="text-sm text-purple-700">
                     <p><strong>Livros avaliados:</strong> {averageRating.total_rated_books}</p>
                     <p><strong>Total de livros lidos:</strong> {averageRating.total_read_books}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-purple-600">{averageRating.message}</p>
                   </div>
                 </div>
               </div>

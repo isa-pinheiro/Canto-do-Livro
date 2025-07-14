@@ -11,11 +11,12 @@ import Image from 'next/image';
 import { api } from '@/config/api';
 import { StarRatingDisplay } from '@/components/ui/StarRating';
 import { Navbar } from '@/components/Navbar';
+import FollowersDialog from '@/components/FollowersDialog';
 
 interface UserProfile {
   id: number;
   username: string;
-  email: string;
+  email?: string;
   profile_picture: string | null;
   created_at: string;
   full_name: string;
@@ -53,9 +54,19 @@ export default function ProfilePage() {
     current_password: '',
     new_password: '',
     confirm_password: ''
+  } as {
+    username: string;
+    email: string;
+    full_name: string;
+    current_password: string;
+    new_password: string;
+    confirm_password: string;
   });
   const [userData, setUserData] = useState<UserProfile | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [showFollowersDialog, setShowFollowersDialog] = useState(false);
+  const [showFollowingDialog, setShowFollowingDialog] = useState(false);
+  const [dialogType, setDialogType] = useState<'followers' | 'following'>('followers');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -86,7 +97,7 @@ export default function ProfilePage() {
         setUserData(data);
         setFormData({
           username: data.username,
-          email: data.email,
+          email: data.email || '',
           full_name: data.full_name,
           current_password: '',
           new_password: '',
@@ -209,7 +220,7 @@ export default function ProfilePage() {
         setUserData(updatedUser);
         setFormData({
           username: updatedUser.username,
-          email: updatedUser.email,
+          email: updatedUser.email || '',
           full_name: updatedUser.full_name,
           current_password: '',
           new_password: '',
@@ -268,6 +279,16 @@ export default function ProfilePage() {
   const handleLogout = () => {
     api.logout();
     router.push('/login');
+  };
+
+  const handleShowFollowers = () => {
+    setDialogType('followers');
+    setShowFollowersDialog(true);
+  };
+
+  const handleShowFollowing = () => {
+    setDialogType('following');
+    setShowFollowingDialog(true);
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -554,7 +575,10 @@ export default function ProfilePage() {
               <div className="mt-8 pt-8 border-t border-gray-200">
                 <h2 className="text-xl font-heading text-purple-900 mb-4">Rede Social</h2>
                 <div className="flex items-center gap-8 mb-6">
-                  <div className="flex items-center gap-3 p-3 rounded-lg bg-purple-50">
+                  <div 
+                    className="flex items-center gap-3 cursor-pointer hover:bg-purple-100 p-3 rounded-lg bg-purple-50 transition-colors"
+                    onClick={handleShowFollowers}
+                  >
                     <Users className="w-6 h-6 text-purple-600" />
                     <div>
                       <p className="text-sm text-gray-500">Seguidores</p>
@@ -563,7 +587,10 @@ export default function ProfilePage() {
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3 p-3 rounded-lg bg-purple-50">
+                  <div 
+                    className="flex items-center gap-3 cursor-pointer hover:bg-purple-100 p-3 rounded-lg bg-purple-50 transition-colors"
+                    onClick={handleShowFollowing}
+                  >
                     <Users className="w-6 h-6 text-purple-600" />
                     <div>
                       <p className="text-sm text-gray-500">Seguindo</p>
@@ -580,21 +607,16 @@ export default function ProfilePage() {
               <div className="mt-8 pt-8 border-t">
                 <h2 className="text-xl font-heading text-purple-900 mb-4">Avaliação Média</h2>
                 <div className="bg-purple-50 p-6 rounded-lg">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+                    <div className="flex items-center gap-3 justify-center md:justify-start mb-4 md:mb-0">
                       <StarRatingDisplay rating={averageRating.average_rating} size="lg" showValue={true} />
                       <span className="text-lg font-medium text-purple-900">
                         {averageRating.average_rating.toFixed(1)} / 5.0
                       </span>
                     </div>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-purple-700">
-                    <div>
+                    <div className="text-sm text-purple-700">
                       <p><strong>Livros avaliados:</strong> {averageRating.total_rated_books}</p>
                       <p><strong>Total de livros lidos:</strong> {averageRating.total_read_books}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-purple-600">{averageRating.message}</p>
                     </div>
                   </div>
                 </div>
@@ -603,6 +625,24 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
+
+      {/* Modal de Seguidores */}
+      <FollowersDialog
+        isOpen={showFollowersDialog}
+        onClose={() => setShowFollowersDialog(false)}
+        userId={userData?.id || 0}
+        type="followers"
+        title="Seguidores"
+      />
+
+      {/* Modal de Seguindo */}
+      <FollowersDialog
+        isOpen={showFollowingDialog}
+        onClose={() => setShowFollowingDialog(false)}
+        userId={userData?.id || 0}
+        type="following"
+        title="Seguindo"
+      />
     </div>
   );
 }

@@ -56,6 +56,11 @@ export default function FollowersDialog({ isOpen, onClose, userId, type, title }
         data = await api.getUserFollowers(userId);
       } else {
         data = await api.getUserFollowing(userId);
+        // Corrigir: se está vendo o próprio perfil, todos devem ser is_following: true
+        const currentUserId = Number(localStorage.getItem('user_id'));
+        if (userId === currentUserId) {
+          data = data.map((u: any) => ({ ...u, is_following: true }));
+        }
       }
       setUsers(data);
     } catch (error) {
@@ -159,21 +164,7 @@ export default function FollowersDialog({ isOpen, onClose, userId, type, title }
                       )}
                     </div>
                   </div>
-                  <Button
-                    size="sm"
-                    variant={user.is_following ? "outline" : "default"}
-                    className={`ml-2 ${
-                      user.is_following 
-                        ? 'border-red-300 text-red-600 hover:bg-red-50 hover:text-red-700' 
-                        : 'bg-purple-600 hover:bg-purple-700'
-                    }`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleFollowToggle(user);
-                    }}
-                  >
-                    {user.is_following ? 'Seguindo' : 'Seguir'}
-                  </Button>
+                  {/* Botão de seguir/seguindo removido */}
                 </div>
               ))}
             </div>

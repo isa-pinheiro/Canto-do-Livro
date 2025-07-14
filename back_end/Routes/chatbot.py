@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from back_end.services.chatbot_service import ChatbotService
 from back_end.configs.database import get_db

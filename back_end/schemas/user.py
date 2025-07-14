@@ -27,7 +27,7 @@ class UserSearchResponse(BaseModel):
 
 class UserBase(BaseModel):
     username: str
-    email: EmailStr
+    email: Optional[EmailStr] = None
     full_name: Optional[str] = None
     profile_picture: Optional[str] = None
 
@@ -74,6 +74,8 @@ class UserResponse(UserBase):
 
     class Config:
         from_attributes = True
+        # Permitir conversão de tipos para evitar problemas de validação
+        arbitrary_types_allowed = True
 
 class NotificationResponse(BaseModel):
     id: int

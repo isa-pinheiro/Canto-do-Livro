@@ -9,20 +9,12 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const checkAuth = () => {
-      try {
-        const token = localStorage.getItem('access_token');
-        if (token) {
-          router.push('/bookshelf');
-        }
-      } catch (error) {
-        console.error('Error checking authentication:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    checkAuth();
+    const token = localStorage.getItem('access_token');
+    if (token) {
+      router.push('/bookshelf');
+    } else {
+      setIsLoading(false);
+    }
   }, [router]);
 
   if (isLoading) {

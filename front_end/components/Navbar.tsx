@@ -85,10 +85,10 @@ export function Navbar() {
       <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6">
         <div className="flex justify-between h-16">
           <div className="flex items-center gap-6">
-            <Link href="/" className="flex items-center gap-2 text-purple-900 font-heading text-xl" aria-label="Página inicial">
+            <div className="flex items-center gap-2 text-purple-900 font-heading text-xl select-none cursor-default" aria-label="Página inicial">
               <BookOpen className="h-6 w-6" aria-hidden="true" />
               <span>Canto do Livro</span>
-            </Link>
+            </div>
             <Link
               href="/bookshelf"
               className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${
